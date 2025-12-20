@@ -638,10 +638,10 @@ fn is_chantai(div: &Division, melds: &[Meld]) -> bool {
 }
 
 fn is_terminal(tile: u8) -> bool {
-    tile >= 27 || tile % 9 == 0 || tile % 9 == 8
+    tile >= 27 || tile.is_multiple_of(9) || (tile % 9 == 8)
 }
 fn is_number_terminal(tile: u8) -> bool {
-    tile < 27 && (tile % 9 == 0 || tile % 9 == 8)
+    tile < 27 && (tile.is_multiple_of(9) || tile % 9 == 8)
 }
 fn is_honor(tile: u8) -> bool {
     tile >= 27
