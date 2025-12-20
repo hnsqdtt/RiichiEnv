@@ -64,6 +64,15 @@ pub enum MeldType {
     Addgang = 4,
 }
 
+#[pyclass(eq, eq_int)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Wind {
+    East = 0,
+    South = 1,
+    West = 2,
+    North = 3,
+}
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct Meld {

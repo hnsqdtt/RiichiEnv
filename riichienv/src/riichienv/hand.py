@@ -350,8 +350,8 @@ class AgariCalculator:
             rinshan=conditions.rinshan,
             chankan=conditions.chankan,
             tsumo_first_turn=conditions.tsumo_first_turn,
-            player_wind=conditions.player_wind,
-            round_wind=conditions.round_wind,
+            player_wind=int(conditions.player_wind),
+            round_wind=int(conditions.round_wind),
             kyoutaku=conditions.kyoutaku,
             tsumi=conditions.tsumi,
         )

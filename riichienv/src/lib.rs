@@ -15,6 +15,7 @@ fn _riichienv(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<types::Hand>()?;
     m.add_class::<types::Meld>()?;
     m.add_class::<types::MeldType>()?;
+    m.add_class::<types::Wind>()?;
     m.add_class::<types::Conditions>()?;
     m.add_class::<types::Agari>()?;
     m.add_class::<score::Score>()?;

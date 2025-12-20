@@ -15,7 +15,7 @@ def test_agari_calc_from_text():
     assert res.ron_agari == 3900
 
     # Ko (South)
-    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=True, player_wind=1))
+    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=True, player_wind=rv.SOUTH))
     assert res.agari
     assert res.han == 2
     assert res.fu == 40
@@ -24,7 +24,7 @@ def test_agari_calc_from_text():
     assert res.ron_agari == 0
 
     # Oya (East)
-    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=True, player_wind=0))
+    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=True, player_wind=rv.EAST))
     assert res.agari
     assert res.han == 3
     assert res.fu == 40
@@ -33,7 +33,7 @@ def test_agari_calc_from_text():
     assert res.ron_agari == 0
 
     # Ron (East)
-    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=False, player_wind=0))
+    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=False, player_wind=rv.EAST))
     assert res.agari
     assert res.han == 2
     assert res.fu == 40

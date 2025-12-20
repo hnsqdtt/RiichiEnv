@@ -10,8 +10,14 @@ from ._riichienv import (
     Kyoku,
     AgariContext,
     parse_tile,
+    Wind,
 )
 from .hand import AgariCalculator, Conditions, Agari
+
+EAST = Wind.East
+SOUTH = Wind.South
+WEST = Wind.West
+NORTH = Wind.North
 
 def _to_mahjong_args(self):
     from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
