@@ -149,12 +149,10 @@ pub fn parse_tile(text: &str) -> PyResult<u8> {
         ));
     }
     if tiles.len() != 1 {
-        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
-            format!(
-                "Expected exactly one tile, but found {} tiles in string",
-                tiles.len()
-            ),
-        ));
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "Expected exactly one tile, but found {} tiles in string",
+            tiles.len()
+        )));
     }
     Ok(tiles[0])
 }
