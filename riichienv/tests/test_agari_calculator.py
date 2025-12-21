@@ -40,3 +40,21 @@ def test_agari_calc_from_text():
     assert res.tsumo_agari_oya == 0
     assert res.tsumo_agari_ko == 0
     assert res.ron_agari == 3900
+
+    # Ko (West)
+    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=True, player_wind=rv.WEST))
+    assert res.agari
+    assert res.han == 2
+    assert res.fu == 40
+    assert res.tsumo_agari_oya == 1300
+    assert res.tsumo_agari_ko == 700
+    assert res.ron_agari == 0
+
+    # Ko (North)
+    res = hand.calc(win_tile, conditions=rv.Conditions(tsumo=True, player_wind=rv.NORTH))
+    assert res.agari
+    assert res.han == 2
+    assert res.fu == 40
+    assert res.tsumo_agari_oya == 1300
+    assert res.tsumo_agari_ko == 700
+    assert res.ron_agari == 0
