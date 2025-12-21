@@ -140,6 +140,72 @@ pub fn parse_hand(text: &str) -> PyResult<(Vec<u8>, Vec<Meld>)> {
     Ok((tiles_136, melds))
 }
 
+/// Parse a single tile string into a 136-format tile ID.
+///
+/// The function accepts tile notation in the format: `{rank}{suit}` where:
+/// - `rank` is a digit 0-9 (0 represents red five)
+/// - `suit` is one of: m (man/characters), p (pin/circles), s (sou/bamboo), z (honors)
+///
+/// # Arguments
+///
+/// * `text` - A string containing exactly one tile (e.g., "2z", "5m", "0p")
+///
+/// # Returns
+///
+/// Returns a u8 tile ID in the 136-format where:
+/// - Each of the 34 unique tiles has 4 copies (0-135 total)
+/// - Tile ID = (tile_type * 4) + copy_index
+/// - For red fives (0m, 0p, 0s), the ID corresponds to the first copy (index 0)
+///
+/// # Examples
+///
+/// ```python
+/// import riichienv as rv
+///
+/// # Regular tiles
+/// tile_id = rv.parse_tile("1m")  # Returns 0 (1-man, first copy)
+/// tile_id = rv.parse_tile("5m")  # Returns 17 (5-man, black, first available)
+/// tile_id = rv.parse_tile("1z")  # Returns 108 (East wind, first copy)
+///
+/// # Red fives (special notation using 0)
+/// tile_id = rv.parse_tile("0m")  # Returns 16 (red 5-man)
+/// tile_id = rv.parse_tile("0p")  # Returns 52 (red 5-pin)
+/// tile_id = rv.parse_tile("0s")  # Returns 88 (red 5-sou)
+///
+/// # Use with AgariCalculator
+/// hand = rv.AgariCalculator.hand_from_text("123m456p789s111z2z")
+/// win_tile = rv.parse_tile("2z")  # Parse the winning tile
+/// result = hand.calc(win_tile, conditions=rv.Conditions())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The input contains meld syntax (parentheses)
+/// - The input contains no tiles or multiple tiles
+/// - The input has invalid tile notation
+#[pyfunction]
+pub fn parse_tile(text: &str) -> PyResult<u8> {
+    let (tiles, melds) = parse_hand(text)?;
+    if !melds.is_empty() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            "parse_tile expects a single tile, but found meld syntax in input",
+        ));
+    }
+    if tiles.is_empty() {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+            "No tile found in string",
+        ));
+    }
+    if tiles.len() != 1 {
+        return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+            "Expected exactly one tile, but found {} tiles in string",
+            tiles.len()
+        )));
+    }
+    Ok(tiles[0])
+}
+
 fn is_suit(c: char) -> bool {
     matches!(c, 'm' | 'p' | 's' | 'z')
 }
