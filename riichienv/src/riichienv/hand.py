@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from mahjong.hand_calculating.hand import HandCalculator
 from mahjong.tile import TilesConverter
 from mahjong.hand_calculating.hand_config import HandConfig, OptionalRules
-from mahjong.meld import Meld
+from .meld import Meld
 from mahjong.constants import EAST, SOUTH, WEST, NORTH
 from . import _riichienv as rust_core
 from ._riichienv import Wind

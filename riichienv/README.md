@@ -29,12 +29,19 @@ pip install .
 ## 🚀 Usage
 
 ```python
-import riichienv
+from riichienv import RiichiEnv
+from riichienv.agents import RandomAgent
 
-env = riichienv.make("riichi-4p-v0")
-obs = env.reset()
-action = env.action_space.sample()
-obs, reward, done, info = env.step(action)
+agent = RandomAgent()
+env = RiichiEnv()
+obs_dict = env.reset()
+while not env.done():
+    # action = obs.env.action_space.sample()
+    actions = {player_id: agent.act(obs)
+               for player_id, obs in obs_dict.items()}
+    obs_dict = env.step(actions)
+
+returns = env.rewards()
 ```
 
 ## 🛠 Development
