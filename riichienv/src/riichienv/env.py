@@ -214,7 +214,7 @@ class RiichiEnv:
                 # Should not happen if correctly used
                 return self._get_observations(self.actionable_players)
                 
-            action = action_raw
+            action: Action = action_raw
             
             # ... Discard process ...
             # For now, let's assume we proceed with discard.
@@ -225,16 +225,24 @@ class RiichiEnv:
             discard_tile_id = -1
             
             if action.type == ActionType.TSUMO:
-                 # Tsumo logic
-                 # Duplicate Tsumo logic from above? 
-                 # Ideally we refactor.
-                 # For now, let's assume if TSUMO, we execute it.
-                 pass 
+                # Handle tsumo (self-draw win): record the event and stop further processing.
+                tsumo_event = {
+                    "type": "tsumo",
+                    "actor": self.current_player,
+                }
+                if self.drawn_tile is not None:
+                    tsumo_event["pai"] = _to_mjai_tile(self.drawn_tile)
+
+                self.mjai_log.append(tsumo_event)
+                # After a tsumo win, no discard should occur; return observations immediately.abs
+                
+                # Set is_done to True
+                self.is_done = True
+                
+                return self._get_observations([])
+
             elif action.type == ActionType.DISCARD:
                  discard_tile_id = action.tile
-
-            # Execute discard
-            # Remove from hand
 
             # Execute discard
             # Remove from hand
@@ -262,7 +270,7 @@ class RiichiEnv:
                  "type": "dahai",
                  "actor": self.current_player,
                  "tile": _to_mjai_tile(discard_tile_id),
-                 "tsumogiri": False 
+                 "tsumogiri": False # TODO: Handle tsumogiri (self-draw)
             }
             self.mjai_log.append(dahai_event)
             
