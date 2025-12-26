@@ -1,6 +1,5 @@
 from riichienv import RiichiEnv
 from riichienv.agents import RandomAgent
-from riichienv.env import Observation
 from riichienv.action import Action, ActionType
 
 class TestRiichiEnv:
