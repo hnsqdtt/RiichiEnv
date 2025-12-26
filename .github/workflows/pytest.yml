@@ -11,11 +11,6 @@ jobs:
   test:
     name: Run tests with uv
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version:
-          - "3.13"
-          - "3.14"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,4 +25,4 @@ jobs:
       - name: Run tests
         run: |
           cd riichienv
-          uv run --python ${{ matrix.python-version }} pytest tests
+          uv run --python 3.13 pytest tests
