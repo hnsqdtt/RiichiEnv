@@ -7,7 +7,7 @@ class Meld:
     tiles: List[int] # 136-based tile IDs
     opened: bool = True
     called_tile: Optional[int] = None # The tile claimed
-    who: int = 0 # Relative index? Or absolute? For now mimic mahjong.meld which uses integer (default 0)
+    who: int = 0 # Absolute player ID (seat index) 0-3, matching mahjong.meld: index in the players list, not relative to the current player
     
     # Constants to match mahjong.meld.Meld usage or preferred usage
     CHI = "chi"
