@@ -38,7 +38,7 @@ To run the benchmark on your machine:
 
 ```bash
 ❯ cd ../benchmark
-❯ uv run bench_agari_mahjong.py
+❯ uv run agari
 Uninstalled 1 package in 1ms
 Installed 1 package in 3ms
 Total Agari situations: 6503
