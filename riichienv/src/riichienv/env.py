@@ -518,7 +518,7 @@ class RiichiEnv:
 
                 return self._get_observations(self.active_players)
             else:
-                # Ryukyoku
+                # Ryukyoku due to wall exhaustion
                 self.is_done = True
                 self.mjai_log.append({"type": "ryukyoku", "reason": "exhaustive_draw"})
                 self.mjai_log.append({"type": "end_kyoku"})
