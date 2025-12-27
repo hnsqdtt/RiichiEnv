@@ -795,7 +795,7 @@ class RiichiEnv:
                 deltas[loser] = -score
             deltas[winner] = score
 
-        # Add Riichi Sticks to validity
+        # Add Riichi Sticks to winning total
         # Any riichi sticks currently on table go to winner
         # Note: self.riichi_sticks tracks 1000 point sticks
         if self.riichi_sticks > 0:
