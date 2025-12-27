@@ -500,15 +500,15 @@ class RiichiEnv:
 
                 self.current_player = claimer
                 self.phase = Phase.WAIT_ACT
-                self.actionable_players = [self.current_player]
+                self.active_players = [self.current_player]
                 self.drawn_tile = None
 
-                return self._get_observations(self.actionable_players)
+                return self._get_observations(self.active_players)
 
             # If no Claim -> Pass -> Next Draw
             self.current_player = (self.current_player + 1) % 4
             self.phase = Phase.WAIT_ACT
-            self.actionable_players = [self.current_player]
+            self.active_players = [self.current_player]
 
             if self.wall:
                 self.drawn_tile = self.wall.pop()
@@ -516,7 +516,7 @@ class RiichiEnv:
                 tsumo_event = {"type": "tsumo", "actor": self.current_player, "tile": _to_mjai_tile(self.drawn_tile)}
                 self.mjai_log.append(tsumo_event)
 
-                return self._get_observations(self.actionable_players)
+                return self._get_observations(self.active_players)
             else:
                 # Ryukyoku
                 self.is_done = True
