@@ -76,7 +76,7 @@ def main() -> None:
     t_riichienv_py = 0.0
     t_mahjong = 0.0
 
-    for i, log_path in enumerate(sorted(list(log_dir.glob("251214-*.json.gz")))):
+    for log_path in sorted(list(log_dir.glob("251214-*.json.gz"))):
         game = ReplayGame.from_json(str(log_path))
 
         for kyoku in game.take_kyokus():
