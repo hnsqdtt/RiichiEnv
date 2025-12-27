@@ -520,7 +520,7 @@ class RiichiEnv:
             else:
                 # Ryukyoku
                 self.is_done = True
-                self.mjai_log.append({"type": "ryukyoku", "reason": "fanpai"})
+                self.mjai_log.append({"type": "ryukyoku", "reason": "exhaustive_draw"})
                 self.mjai_log.append({"type": "end_kyoku"})
                 self.mjai_log.append({"type": "end_game"})
                 return self._get_observations([])
