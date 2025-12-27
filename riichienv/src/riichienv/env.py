@@ -321,8 +321,9 @@ class RiichiEnv:
                 if discard_tile_id in self.hands[self.current_player]:
                     self.hands[self.current_player].remove(discard_tile_id)
                 else:
-                    # Error or fallback
-                    pass
+                    raise ValueError(
+                        f"Discard tile {discard_tile_id} not found in player {self.current_player}'s hand: {self.hands[self.current_player]}"
+                    )
 
             self.discards[self.current_player].append(discard_tile_id)
             self.hands[self.current_player].sort()
