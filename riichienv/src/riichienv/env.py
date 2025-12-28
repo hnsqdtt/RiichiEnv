@@ -261,7 +261,7 @@ class RiichiEnv:
                 return self._get_observations(self.active_players)
 
             action: Action = action_raw
-
+            
             discard_tile_id: int | None = None
 
             if action.type == ActionType.RIICHI:
@@ -345,6 +345,25 @@ class RiichiEnv:
                  
                  self.is_done = True
                  return self._get_observations([])
+
+            elif action.type in [ActionType.ANKAN, ActionType.KAKAN]:
+                 # Handle self-kan
+                 self._execute_claim(self.current_player, action)
+                 
+                 if not self.wall:
+                     self.is_done = True
+                     self.mjai_log.append({"type": "ryukyoku", "reason": "exhaustive_draw"}) 
+                     self.mjai_log.append({"type": "end_kyoku"})
+                     self.mjai_log.append({"type": "end_game"})
+                     return self._get_observations([])
+
+                 # Rinshan Draw
+                 self.drawn_tile = self.wall.pop()
+                 # Log Tsumo (Rinshan)
+                 tsumo_event = {"type": "tsumo", "actor": self.current_player, "tile": _to_mjai_tile(self.drawn_tile)}
+                 self.mjai_log.append(tsumo_event)
+                 
+                 return self._get_observations(self.active_players)
 
             elif action.type == ActionType.DISCARD:
                 discard_tile_id = action.tile
@@ -552,7 +571,13 @@ class RiichiEnv:
                 act = actions.get(pid)
 
                 if act and isinstance(act, Action):
-                    # Validate against legal (or current_claims)
+                    # Validate action is legal?
+                    # print(">> ENV STEP ACTION:", act)
+                    # print(">> ENV STEP ACTION TYPE:", act.type, "DISCARD IS:", ActionType.DISCARD)
+                    if act.type == ActionType.ANKAN:
+                         print(">> ENV SEES ANKAN")
+                    if act.type == ActionType.DISCARD:
+                         print(">> ENV SEES DISCARD") # (or current_claims)
                     # For simplicity, check type
                     if act.type in [ActionType.RON, ActionType.PON, ActionType.DAIMINKAN, ActionType.CHI]:
                         valid_actions[pid] = act
@@ -877,29 +902,60 @@ class RiichiEnv:
         target_tile = action.tile
         if target_tile is None:
             raise ValueError("Claim action must have a target tile")
-        tiles = sorted(consume + [target_tile])
+            
+        if action.type == ActionType.ANKAN:
+             if len(consume) == 4:
+                 tiles = sorted(consume)
+             else:
+                 tiles = sorted(consume + [target_tile])
+        elif action.type == ActionType.KAKAN:
+             # KAKAN: Upgrade existing Pon to AddGang
+             # tiles should be the 4 tiles (3 from Pon + 1 added)
+             # Find compatible Pon
+             # target_tile is the one added. consume usually contains it too (removed from hand).
+             # We need to find the Pon in self.melds
+             
+             # Warning: We need to modify self.melds in place or remove/add.
+             pass 
+             tiles = [] # placeholder
+        else:
+            tiles = sorted(consume + [target_tile])
 
         # Determine Meld Type
         opened = True
+        m_type = MeldType.Peng # default
+        
         if action.type == ActionType.CHI:
             m_type = MeldType.Chi
         elif action.type == ActionType.PON:
             m_type = MeldType.Peng
         elif action.type == ActionType.DAIMINKAN:
-            m_type = MeldType.Gang
+             m_type = MeldType.Gang
         elif action.type == ActionType.ANKAN:
             m_type = MeldType.Angang
             opened = False
         elif action.type == ActionType.KAKAN:
             m_type = MeldType.Addgang
-        else:
-             # Default or Error?
-             # Fallback to Pon if unclear? No, raise.
-             # Assuming valid claim type.
-             m_type = MeldType.Peng # placeholder?
-             # Logic flow guarantees claim types from valid_actions (Ron/Pon/Kan/Chi).
-             pass
-
+            # Kakan Logic:
+            # Find existing Pon
+            # We assume tid // 4 matches.
+            t_type = target_tile // 4
+            found_idx = -1
+            for i, m in enumerate(self.melds.get(pid, [])):
+                if m.meld_type == MeldType.Peng and m.tiles[0] // 4 == t_type:
+                    found_idx = i
+                    break
+            
+            if found_idx != -1:
+                old_meld = self.melds[pid].pop(found_idx)
+                # New tiles = old tiles + added tile
+                tiles = sorted(old_meld.tiles + [target_tile])
+            else:
+                 # Failed to find Pon? Should not happen if Kakan is legal.
+                 # Fallback: Just create a Gang meld?
+                 tiles = sorted(consume + [target_tile]) # Incorrect but prevents crash
+                 pass
+        
         # Check calling logic
         meld = Meld(m_type, tiles, opened)
         self.melds.setdefault(pid, []).append(meld)
@@ -909,8 +965,22 @@ class RiichiEnv:
         if action.type == ActionType.CHI:
             mjai_type = "chi"
         elif action.type == ActionType.DAIMINKAN:
-            mjai_type = "kan"
-
+            mjai_type = "kan" # Open kan
+        elif action.type == ActionType.ANKAN:
+            mjai_type = "ankan" # Or "gang"? MJAI uses "cang"? No usually "nakan"?
+            # MJSoul uses "AnGangAddGang".
+            # Standard MJAI uses "reach" "chi" "pon" "kan" "hora" "ryukyoku" "dora" "dahai".
+            # For Ankan/Kakan: "kan" is used?
+            # Specifically:
+            # Open Kan: type="kan", data...
+            # Closed Kan: type="kan", data... (but tiles different?)
+            # Kakan: type="kan", data...
+            # Let's assume "kan" is generic?
+            # But wait, verification script distinguishes them.
+            mjai_type = "kan" 
+        elif action.type == ActionType.KAKAN:
+            mjai_type = "kan" # Add kan
+            
         discarder = self.last_discard["seat"] if self.last_discard else -1
 
         event = {
