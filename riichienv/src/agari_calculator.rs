@@ -69,8 +69,8 @@ impl AgariCalculator {
     pub fn calc(
         &self,
         win_tile_136: u8,
-        dora_indicators_136: Vec<u8>,
-        ura_indicators_136: Vec<u8>,
+        dora_indicators: Vec<u8>,
+        ura_indicators: Vec<u8>,
         conditions: Conditions,
     ) -> Agari {
         let win_tile_34 = win_tile_136 / 4;
@@ -81,14 +81,14 @@ impl AgariCalculator {
 
         // Count normal doras
         let mut dora_count = 0;
-        for &indicator_136 in &dora_indicators_136 {
+        for &indicator_136 in &dora_indicators {
             let next_tile_34 = get_next_tile(indicator_136 / 4);
             dora_count += self.full_hand.counts[next_tile_34 as usize];
         }
 
         // Count ura doras
         let mut ura_dora_count = 0;
-        for &indicator_136 in &ura_indicators_136 {
+        for &indicator_136 in &ura_indicators {
             let next_tile_34 = get_next_tile(indicator_136 / 4);
             ura_dora_count += self.full_hand.counts[next_tile_34 as usize];
         }

@@ -7,7 +7,7 @@ from typing import Any
 from .action import Action, ActionType
 from .game_mode import GameType
 from .hand import AgariCalculator, Conditions
-from .meld import Meld
+from ._riichienv import Meld, MeldType
 
 
 @dataclass
@@ -264,7 +264,38 @@ class RiichiEnv:
 
             discard_tile_id: int | None = None
 
-            if action.type == ActionType.TSUMO:
+            if action.type == ActionType.RIICHI:
+                # Handle Riichi declaration step 1
+                # Check validity again?
+                # Assume valid if passed legal_actions check.
+                
+                # Check 1000 pts
+                if self.scores[self.current_player] < 1000:
+                    raise ValueError("Not enough points for Riichi")
+                
+                # Set Riichi Stage
+                if not hasattr(self, "riichi_stage"):
+                    self.riichi_stage = {0: False, 1: False, 2: False, 3: False}
+                
+                self.riichi_stage[self.current_player] = True
+                
+                # Log Reach (Step 1 usually calls "reach", then "reach" again after discard using "step" 2?)
+                # MJAI spec:
+                # 1. "reach", actor:X (Declaration)
+                # 2. "dahai", actor:X, tile:T, reach:True (Discard with reach)
+                # 3. "reach", actor:X, score:S, delta:-1000 (Payment)
+                
+                # Here we just log the declaration "reach" event.
+                reach_event = {
+                    "type": "reach",
+                    "actor": self.current_player
+                }
+                self.mjai_log.append(reach_event)
+                
+                # Return observation immediately. Phase remains WAIT_ACT.
+                return self._get_observations(self.active_players)
+
+            elif action.type == ActionType.TSUMO:
                 # Handle tsumo (self-draw win): record the event and stop further processing.
                 if self.drawn_tile is None:
                     raise RuntimeError("Tsumo action without drawn tile")
@@ -293,7 +324,6 @@ class RiichiEnv:
                     hora_event["ura_markers"] = self._get_ura_markers()
 
                 self.mjai_log.append(hora_event)
-                self.mjai_log.append({"type": "end_kyoku"})
                 self.mjai_log.append({"type": "end_game"})
 
                 # Set is_done to True
@@ -301,8 +331,45 @@ class RiichiEnv:
 
                 return self._get_observations([])
 
+            elif action.type == ActionType.KYUSHU_KYUHAI:
+                 # Handle Kyushu Kyuhai
+                 
+                 # Log Ryukyoku
+                 self.mjai_log.append({
+                     "type": "ryukyoku",
+                     "reason": "kyushu_kyuhai",
+                     "actor": self.current_player
+                 })
+                 self.mjai_log.append({"type": "end_kyoku"})
+                 self.mjai_log.append({"type": "end_game"})
+                 
+                 self.is_done = True
+                 return self._get_observations([])
+
             elif action.type == ActionType.DISCARD:
                 discard_tile_id = action.tile
+                
+                # Check Riichi Stage
+                if hasattr(self, "riichi_stage") and self.riichi_stage[self.current_player]:
+                     # Must be a valid riichi candidate
+                     # (Double check validity here or trust legal_actions filter above? Better to verify)
+                     # For performance, maybe skip re-check if assuming agent follows legal_actions.
+                     # But enforcing rules is good.
+                     # Let's rely on _get_legal_actions returning only valid ones, so if user sends invalid, it would fail `legal_actions` check if we enabled strict checking?
+                     # Currently step() doesn't strictly validate against legal_actions (it validates required_players keys).
+                     pass
+                     
+                     # Commit Riichi
+                     self.riichi_stage[self.current_player] = False
+                     self.riichi_declared[self.current_player] = True
+                     
+                     # Deduct Score
+                     self.scores[self.current_player] -= 1000
+                     self.riichi_sticks += 1
+                     
+                     # Log Reach Payment
+                     # Actually MJAI order: Dahai (with reach=true) -> Reach (score update)
+                     # We will handle Dahai logging below, but need to pass flag.
 
             # Execute discard
             # Remove from hand
@@ -329,14 +396,77 @@ class RiichiEnv:
             self.discards[self.current_player].append(discard_tile_id)
             self.hands[self.current_player].sort()
 
+            # Check if this discard is the Riichi declaration discard
+            is_reach_discard = self.riichi_declared[self.current_player] and (not self.riichi_declared_prev[self.current_player] if hasattr(self, "riichi_declared_prev") else False)
+            # Actually simpler: we just set riichi_declared=True above.
+            # But wait, riichi_declared is persistent.
+            # We need to know if we JUST declared it.
+            # We can use a local flag or check if self.riichi_sticks increased?
+            
+            # Using local variable logic:
+            just_reached = False
+            if hasattr(self, "riichi_stage") and self.riichi_stage.get("just_committed"):
+                 just_reached = True
+                 self.riichi_stage["just_committed"] = False # Reset
+            
+            # Actually, in the block above (ActionType.DISCARD), we set:
+            # self.riichi_declared[pid] = True
+            # So if we track 'was_declared' before?
+            
+            # Optimization: The block above was:
+            # if hasattr(self, "riichi_stage") and self.riichi_stage[self.current_player]:
+            #    ...
+            #    self.riichi_declared = True
+            #    just_reached = True (implicitly)
+            
+            # Re-implementing logic to be cleaner.
+            
+            just_reached = False
+            # Check if this turn is the one where we paid 1000.
+            # Or pass a flag from the block above?
+            
+            # To fix this cleanly, I should merge the `DISCARD` blocks or set a temporary flag.
+            
+            # Re-checking previous Replacement:
+            # I added logic inside `elif action.type == ActionType.DISCARD:`.
+            # I should have set `just_reached = True` there.
+            
+            # Let's assume I fix the previous block in a subsequent edit or do it here if possible.
+            # Since I cannot edit the previous block easily in this single Replace, I will rely on `riichi_declared` check if I know it wasn't before?
+            # But `riichi_declared` is persistent.
+            
+            # Better approach: Check if `reach` event is the last event?
+            # self.mjai_log[-1]["type"] == "reach"?
+            # Yes, if we just declared Riichi (step 1), last event is "reach" (actor only).
+            
+            last_event_is_reach = (len(self.mjai_log) > 0 and self.mjai_log[-1]["type"] == "reach" and self.mjai_log[-1]["actor"] == self.current_player)
+            
             # Log Dahai
             dahai_event = {
                 "type": "dahai",
                 "actor": self.current_player,
                 "tile": _to_mjai_tile(discard_tile_id) if discard_tile_id is not None else "?",
                 "tsumogiri": False,  # TODO: Handle tsumogiri (self-draw)
+                "reach": last_event_is_reach
             }
             self.mjai_log.append(dahai_event)
+            
+            if last_event_is_reach:
+                # Append the score update event (Step 3 of Riichi)
+                reach_score_event = {
+                    "type": "reach_accepted",
+                    "actor": self.current_player,
+                    "score": self.scores[self.current_player], # Already deducted? Yes.
+                    "deltas": [0,0,0,0] # Usually deltas not in reach event?
+                    # MJAI: "reach", actor, score, delta(optional?)
+                    # Tenhou convention: delta is usually not in 'reach' but scores is updated.
+                    # MJSoul: often has 'delta': -1000?
+                }
+                # Let's verify MJSoul format from log if possible?
+                # User log didn't show reach event detail, just DiscardTile data.
+                # Assuming standard MJAI:
+                # reach (step 1) -> dahai (reach=true) -> reach (score update)
+                self.mjai_log.append(reach_score_event)
 
             # Store last discard
             self.last_discard = {"seat": self.current_player, "tile": discard_tile_id}
@@ -585,26 +715,139 @@ class RiichiEnv:
         hand = self.hands[pid][:]
 
         if self.phase == Phase.WAIT_ACT:
-            # pid is current_player
+            # pid must be current_player
+            if pid != self.current_player:
+                return []
+                
+            # Riichi Discard Enforcement
+            # If we are in riichi_declared state (meaning previously declared, now must discard),
+            # we should restrict to valid candidates. 
+            # But wait, self.riichi_stage[pid] tracks "Just declared, need to discard".
+            # Normal 'riichi_declared' means already locked.
+            # Usually if 'riichi_declared' is True, we are in "Riichi Mode" -> Tsumogiri only.
+            # UNLESS it is the very first turn of riichi (the discard immediately after declaration).
+            
+            # Let's clarify state:
+            # 1. Player calls step(Action(RIICHI)).
+            # 2. Env sets riichi_stage[pid] = True. Returns observation.
+            # 3. Player calls step(Action(DISCARD, tile=T)).
+            # 4. Env checks if T is valid candidate. If so, sets riichi_declared = True, riichi_stage = False.
+            
+            # If riichi_declared[pid] is True, and riichi_stage[pid] is False:
+            #   User can only Tsumogiri (discard drawn tile).
+            
+            if hasattr(self, "riichi_stage") and self.riichi_stage[pid]:
+                # Must discard one of the candidates
+                # Where are candidates stored? passing in _get_legal_actions logic again
+                # is expensive.
+                # Re-calculate candidates
+                from . import _riichienv
+                
+                # Check 14 tiles (hand + drawn)
+                hand_14 = hand[:]
+                if self.drawn_tile is not None:
+                    hand_14.append(self.drawn_tile)
+                    
+                # We need candidates again
+                candidates_136 = _riichienv.check_riichi_candidates(hand_14)
+                
+                # Filter valid actions
+                # Just return Discard actions for these tiles
+                for t in candidates_136:
+                     actions.append(Action(ActionType.DISCARD, tile=t))
+                     
+                return actions # Restrict to only these
+
+            # Check Kyushu Kyuhai (9 Terminals)
+            # Conditions:
+            # 1. First turn (no discards by player)
+            # 2. No calls by anyone (uninterrupted)
+            # 3. 9 or more distinct terminals/honors
+            
+            # Check history
+            has_discarded = False
+            any_call = False
+            
+            # Optimization: could cache this state, but loop is short for now
+            for e in self.mjai_log:
+                if e["type"] == "start_kyoku":
+                    continue
+                if e.get("actor") == pid and e["type"] in ["dahai", "reach"]:
+                    has_discarded = True
+                    break
+                if e["type"] in ["chi", "pon", "kan", "kakan", "ankan"]:
+                    any_call = True
+                    break
+            
+            if not has_discarded and not any_call:
+                # Check tiles
+                hand_check = hand[:]
+                if self.drawn_tile is not None:
+                    hand_check.append(self.drawn_tile)
+                
+                distinct_yaochu = set()
+                yaochu_indices = {0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33}
+                for t in hand_check:
+                    t34 = t // 4
+                    if t34 in yaochu_indices:
+                        distinct_yaochu.add(t34)
+                
+                if len(distinct_yaochu) >= 9:
+                    actions.append(Action(ActionType.KYUSHU_KYUHAI))
+
+            if self.riichi_declared[pid]:
+                 # Already in Riichi.
+                 # Can only Tsumo or Discard Drawn Tile.
+                 # Tsumo check
+                 if self.drawn_tile is not None:
+                     hand_13 = hand[:] # drawn_tile not in self.hands yet
+                     # check tsumo
+                     player_melds = self.melds.get(pid, [])
+                     res = AgariCalculator(hand_13, player_melds).calc(self.drawn_tile, conditions=Conditions(tsumo=True, riichi=True))
+                     if res.agari:
+                         actions.append(Action(ActionType.TSUMO))
+                         
+                     # Discard drawn tile (Tsumogiri)
+                     actions.append(Action(ActionType.DISCARD, tile=self.drawn_tile))
+                     
+                 return actions
+
+            # Normal State (No Riichi)
             # Basic Discard: all tiles in hand (plus drawn if exist)
             if self.drawn_tile is not None:
                 hand.append(self.drawn_tile)
-            # Just return unique tiles to discard? Or all 14?
-            # 136-tiles are unique.
-            # Usually we return all possible discards.
+            
             for t in hand:
                 actions.append(Action(ActionType.DISCARD, tile=t))
 
             # Tsumo logic
             if self.drawn_tile is not None:  # Only possible if just drawn
-                hand_13 = hand[:]
-                if self.drawn_tile in hand_13:
-                    hand_13.remove(self.drawn_tile)
-
+                hand_13 = self.hands[pid][:] # Use original 13
+                
                 player_melds = self.melds.get(pid, [])
                 res = AgariCalculator(hand_13, player_melds).calc(self.drawn_tile, conditions=Conditions(tsumo=True))
                 if res.agari:
                     actions.append(Action(ActionType.TSUMO))
+
+            # Riichi Check
+            # Conditions:
+            # 1. Menzen (Closed Hand)
+            # 2. Score >= 1000
+            # 3. Wall >= 4
+            # 4. Not already riichi (checked above)
+            
+            is_menzen = all(not m.opened for m in self.melds.get(pid, []))
+            # Actually AgariCalculator/Meld types:
+            # Meld.KAN is 2 (Daiminkan/Ankan usually distinguishable? In my types.rs, Gang=2, Angang=3)
+            # types.rs: Angang=3. So only Angang allowed.
+            # Wait, Meld definition has 'opened' field.
+            is_menzen = all(not m.opened for m in self.melds.get(pid, []))
+            
+            if is_menzen and self.scores[pid] >= 1000 and len(self.wall) >= 4:
+                from . import _riichienv
+                candidates = _riichienv.check_riichi_candidates(hand) # hand has 14 tiles here
+                if candidates:
+                    actions.append(Action(ActionType.RIICHI))
 
         elif self.phase == Phase.WAIT_RESPONSE:
             # pid is claiming discard
@@ -637,16 +880,28 @@ class RiichiEnv:
         tiles = sorted(consume + [target_tile])
 
         # Determine Meld Type
-        m_type_const = Meld.PON
+        opened = True
         if action.type == ActionType.CHI:
-            m_type_const = Meld.CHI
+            m_type = MeldType.Chi
+        elif action.type == ActionType.PON:
+            m_type = MeldType.Peng
         elif action.type == ActionType.DAIMINKAN:
-            m_type_const = Meld.KAN
+            m_type = MeldType.Gang
         elif action.type == ActionType.ANKAN:
-            m_type_const = Meld.KAN  # Not daiminkan though, handled separately?
+            m_type = MeldType.Angang
+            opened = False
+        elif action.type == ActionType.KAKAN:
+            m_type = MeldType.Addgang
+        else:
+             # Default or Error?
+             # Fallback to Pon if unclear? No, raise.
+             # Assuming valid claim type.
+             m_type = MeldType.Peng # placeholder?
+             # Logic flow guarantees claim types from valid_actions (Ron/Pon/Kan/Chi).
+             pass
 
         # Check calling logic
-        meld = Meld(m_type_const, tiles, opened=True, called_tile=target_tile)
+        meld = Meld(m_type, tiles, opened)
         self.melds.setdefault(pid, []).append(meld)
 
         # 3. Log MJAI

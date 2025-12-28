@@ -12,7 +12,7 @@ from ._riichienv import (  # type: ignore
     parse_tile,
 )
 from .action import Action, ActionType
-from .env import RiichiEnv
+from .env import RiichiEnv, Phase
 from .game_mode import GameType
 from .hand import Agari, AgariCalculator, Conditions
 
@@ -37,6 +37,7 @@ __all__ = [
     "Action",
     "ActionType",
     "RiichiEnv",
+    "Phase",
     "GameType",
     "Agari",
     "AgariCalculator",

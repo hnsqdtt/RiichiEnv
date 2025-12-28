@@ -12,6 +12,21 @@ pub struct Division {
     pub body: Vec<Mentsu>,
 }
 
+pub fn is_tenpai(hand: &Hand) -> bool {
+    // Try adding each tile 0..34
+    // If is_agari becomes true, then it is tenpai.
+    for i in 0..crate::types::TILE_MAX {
+        let mut processing_hand = hand.clone();
+        if processing_hand.counts[i] < 4 {
+            processing_hand.add(i as u8);
+            if is_agari(&processing_hand) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 pub fn is_agari(hand: &Hand) -> bool {
     if is_kokushi(hand) {
         return true;
