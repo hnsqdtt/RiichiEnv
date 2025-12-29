@@ -674,7 +674,11 @@ class RiichiEnv:
 
                     self.drawn_tile = self.wall.pop()
                     # Log Tsumo (Rinshan)
-                    tsumo_event = {"type": "tsumo", "actor": self.current_player, "tile": _to_mjai_tile(self.drawn_tile)}
+                    tsumo_event = {
+                        "type": "tsumo",
+                        "actor": self.current_player,
+                        "tile": _to_mjai_tile(self.drawn_tile),
+                    }
                     self.mjai_log.append(tsumo_event)
 
                 return self._get_observations(self.active_players)
@@ -928,7 +932,6 @@ class RiichiEnv:
                                 actions.append(Action(ActionType.KAKAN, tile=t, consume_tiles=[t]))
                                 # Does allow multiple Kakan if multiple tiles of same type? (e.g. Red vs Normal)
                                 # Usually yes.
-
 
         elif self.phase == Phase.WAIT_RESPONSE:
             # pid is claiming discard

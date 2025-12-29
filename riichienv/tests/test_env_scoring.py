@@ -148,14 +148,14 @@ class TestRiichiScoring:
         # Round wind = 1 (South)
         env = RiichiEnv(seed=42, round_wind=1)
         env.reset()
-        
+
         # Verify start_kyoku event has bakaze="S"
         start_kyoku = next(e for e in env.mjai_log if e["type"] == "start_kyoku")
         assert start_kyoku["bakaze"] == "S"
 
         # P0 Wind (East) is not Yaku in South Round (unless East Round too, but this is South)
         # But South Wind IS Yaku (Round Wind)
-        
+
         # Construct Hand with South Triplet
         # South tiles: 1s=72..107 is Sou, Honors start 108.
         # 1z=East, 2z=South
@@ -166,42 +166,38 @@ class TestRiichiScoring:
         south_triplet = [112, 113, 114]
 
         # 111222567m 44m 222z
-        misc = [0, 1, 2,  4, 5, 6, 17, 20, 24] # 3 sets
-        pair_tile = 12 # 4m
-        
+        misc = [0, 1, 2, 4, 5, 6, 17, 20, 24]  # 3 sets
+        pair_tile = 12  # 4m
+
         hand = south_triplet + misc + [pair_tile]
         # 13 tiles
-        
+
         env.hands[0] = sorted(hand)
-        
+
         # Draw pair match
-        env.drawn_tile = 13 # 4m
+        env.drawn_tile = 13  # 4m
         env.current_player = 0
-        
+
         # Execute Tsumo
         env.step({0: Action(ActionType.TSUMO)})
-        
+
         hora_event = env.mjai_log[-3]
         assert hora_event["type"] == "hora"
-        
+
         # Check if Yaku includes South (Round Wind)
         deltas = hora_event["deltas"]
 
         # Manual check needs correct conditions
         # Player 0 (East), Round 1 (South)
-        cond = Conditions(
-            tsumo=True,
-            player_wind=0, 
-            round_wind=1
-        )
+        cond = Conditions(tsumo=True, player_wind=0, round_wind=1)
 
         calc = AgariCalculator(env.hands[0], env.melds[0]).calc(env.drawn_tile, conditions=cond)
-        # Sort yaku for comparison? AgariCalculator output order might vary? 
-        # Usually it returns sorted or fixed order. 
+        # Sort yaku for comparison? AgariCalculator output order might vary?
+        # Usually it returns sorted or fixed order.
         # But failing output was [22, 27]. Expected [11, 22, 27].
         # 11 is usually Yakuhai.
-        
+
         # Note: Set comparison is safer for tests.
-        assert set(calc.yaku) == {1, 11, 22, 27} # Menzen Tsumo, Yakuhai:South, Sanankou, Honitsu
+        assert set(calc.yaku) == {1, 11, 22, 27}  # Menzen Tsumo, Yakuhai:South, Sanankou, Honitsu
         assert deltas[0] == 18000
         assert deltas[1] * -1 == calc.tsumo_agari_ko
