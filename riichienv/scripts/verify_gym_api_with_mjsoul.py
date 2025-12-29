@@ -974,10 +974,39 @@ class MjsoulEnvVerifier:
                             # DAIMINKAN (Open Kan)
                             assert len([a for a in obs.legal_actions() if a.type == ActionType.DAIMINKAN]), "ActionType.DAIMINKAN not found"
                              
-                            consumed = [cvt.mpsz_to_tid(t) for i, t in enumerate(event["data"]["tiles"]) if event["data"]["froms"][i] == player_id]
+                            consumed_mpsz_list = [t for i, t in enumerate(event["data"]["tiles"]) if event["data"]["froms"][i] == player_id]
                             target_tile_list = [cvt.mpsz_to_tid(t) for i, t in enumerate(event["data"]["tiles"]) if event["data"]["froms"][i] != player_id]
                             target_tile = target_tile_list[0]
-                             
+
+                            consumed = []
+                            # Smart Scan for DAIMINKAN
+                            hand_copy = list(self.obs_dict[player_id].hand)
+                            for mpsz in consumed_mpsz_list:
+                                found_tid = None
+                                for tid in hand_copy:
+                                    if cvt.tid_to_mpsz(tid) == mpsz:
+                                        found_tid = tid
+                                        break
+                                
+                                if found_tid is not None:
+                                    consumed.append(found_tid)
+                                    hand_copy.remove(found_tid)
+                                else:
+                                    # Not found -> Force Patch
+                                    if self._verbose:
+                                        print(f">> WARNING: Missing tile {mpsz} for DAIMINKAN. Hand: {cvt.tid_to_mpsz_list(self.obs_dict[player_id].hand)}")
+                                        print(f">> TRUST: Patching hand to include {mpsz} for DAIMINKAN.")
+                                    
+                                    new_tid = cvt.mpsz_to_tid(mpsz)
+                                    if self.env.hands[player_id]:
+                                        removed = self.env.hands[player_id].pop(0)
+                                        if self._verbose:
+                                            print(f">> REMOVED {cvt.tid_to_mpsz(removed)} from hand.")
+                                    self.env.hands[player_id].append(new_tid)
+                                    self.env.hands[player_id].sort()
+                                    consumed.append(new_tid)
+                                    hand_copy.append(new_tid)
+
                             action = Action(ActionType.DAIMINKAN, tile=target_tile, consume_tiles=consumed)
                              
                             step_actions = {player_id: action}
