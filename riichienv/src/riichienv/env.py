@@ -1,3 +1,4 @@
+import sys
 import os
 import hashlib
 import random
@@ -191,10 +192,7 @@ class RiichiEnv:
             self.dora_indicators = [self.wall[4]]
 
         else:
-            # Random shuffle
-            # Initialize tiles: 136 tiles
-            # 0-33 are tile types. Each type has 4 copies.
-            # IDs: 0-135. Type = id // 4.
+            # Random shuffle. Initialize tiles: 136 tiles
             self.wall = list(range(136))
             self._rng.shuffle(self.wall)
             self.dora_indicators = [self.wall[4]]
@@ -275,10 +273,6 @@ class RiichiEnv:
         return self._get_observations(self.active_players)  # Start state
 
     def step(self, actions: dict[int, Action]) -> dict[int, Observation]:
-        # DEBUG: Trace Step
-        import sys
-
-        # print(f"DEBUG: ENV STEP CALLED. Actions: {actions}", file=sys.stderr)
         """
         Execute one step.
         actions: Map from player_id to Action.
@@ -305,7 +299,6 @@ class RiichiEnv:
 
         # Convert raw dict/int to Action objects if needed
         # Assuming actions is {pid: Action object} or {pid: legacy_int}
-
         # PHASE: WAIT_ACT
         if self.phase == Phase.WAIT_ACT:
             # Expect action from current_player
@@ -1384,49 +1377,10 @@ class RiichiEnv:
         # Base win points
         if is_tsumo:
             # Tsumo
-            # Dealer win: all others pay oya_payment (which is usually split? No, tsumo_agari_oya implies total?)
-            # Wait, Rust Agari struct:
-            # tsumo_agari_oya: payment from EACH child? Or total?
-            # tsumo_agari_ko: payment from Dealer? or Child?
-
-            # Looking at mahjong lib / typical usage:
-            # If Dealer wins (Oya):
-            #   get 'tsumo_agari_oya' from *each* child?
-            #   Wait, 'tsumo_agari_oya' usually refers to the payment *amount* specifically?
-            #   Let's assume AgariCalculator returns standard points.
-            #   Usually:
-            #     Dealer Tsumo: 4000 all -> everyone pays 4000.
-            #     Child Tsumo: 1000/2000 -> Dealer pays 2000, Child pays 1000.
-
-            # Checking `agari_calculator.rs`:
-            # It just returns points.
-            # Let's check `hand.py` Agari dataclass fields:
-            # tsumo_agari_oya: int
-            # tsumo_agari_ko: int
-
-            # Standard Convention:
-            # If Winner is Dealer:
-            #   Each child pays `tsumo_agari_oya` (or checks total?)
-            #   Actually `tsumo_agari_oya` usually means "Payment FOR Oya" (when Ko wins)?
-            #   OR "Payment BY Oya"?
-
-            # Corrections based on typical `mahjong` library:
-            # If Ko wins:
-            #   main_payment = tsumo_agari_oya (Dealer pays this)
-            #   other_payment = tsumo_agari_ko (Other Ko pays this)
-            # If Oya wins:
-            #   all_payment = tsumo_agari_oya (All Ko pay this) (wait, usually oya payment is higher?)
-            #   Actually, with `mahjong` library:
-            #     calculate_scores returns: {"main": X, "additional": Y}
-            #     If oya Tsumo: main=X (per person).
-            #     If ko Tsumo: main=DealerPay, additional=ChildPay.
-
-            # The Rust struct names are `tsumo_agari_oya` and `tsumo_agari_ko`.
             # If Oya wins, `tsumo_agari_oya` is likely the payment per person.
             # If Ko wins, `tsumo_agari_oya` is payment by Oya, `tsumo_agari_ko` is payment by Ko.
-
             if winner == self.oya:  # Dealer
-                # Dealer Tsumo
+                # Dealer (Oya) Tsumo
                 # Based on verification: tsumo_agari_ko holds the payment amount for Kids.
                 # tsumo_agari_oya is 0 because there is no Oya to pay.
                 payment_all = agari.tsumo_agari_ko
@@ -1437,7 +1391,7 @@ class RiichiEnv:
                         total_win += payment_all
                 deltas[winner] = total_win
             else:
-                # Child Tsumo
+                # Child (Ko) Tsumo
                 payment_oya = agari.tsumo_agari_oya
                 payment_ko = agari.tsumo_agari_ko
                 total_win = 0
@@ -1505,16 +1459,9 @@ class RiichiEnv:
         #    Target = Orig(4+2*c) - TopsPops. TotalPops = (c-1) + pending.
         #    Target = 5 + c - pending.
         next_idx = 5 + count - self.pending_kan_dora_count
-
-        # print(
-        #     f"DEBUG: REVEAL KAN DORA. post_rinshan={post_rinshan}. Count={count}. NextIdx={next_idx}. Tile={cvt.tid_to_mpsz(self.wall[next_idx])}"
-        # )
-
         if 0 <= next_idx < len(self.wall):
             new_dora_ind = self.wall[next_idx]
             self.dora_indicators.append(new_dora_ind)
-
-            # Log event
             dora_event = {"type": "dora", "dora_marker": _to_mjai_tile(new_dora_ind)}
             self.mjai_log.append(dora_event)
 
