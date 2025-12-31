@@ -139,6 +139,7 @@ class RiichiEnv:
         self.last_discard: dict[str, Any] | None = None  # {seat, tile_136}
 
         self.current_claims: dict[int, list[Action]] = {}  # Potential claims for current discard
+        self.pending_kan: tuple[int, Action] | None = None  # To handle Chankan responseフェーズ
 
         # Round State
         self.oya: int = 0
@@ -226,6 +227,7 @@ class RiichiEnv:
         self.phase = Phase.WAIT_ACT
         self.active_players = [self.oya]
         self.current_claims = {}
+        self.pending_kan = None
 
         self.last_discard = None
         self.melds = {0: [], 1: [], 2: [], 3: []}
@@ -453,7 +455,29 @@ class RiichiEnv:
 
             elif action.type in [ActionType.ANKAN, ActionType.KAKAN]:
                 # Handle self-kan
-                # Ensure drawn_tile is in hand so _execute_claim can find it
+                # Check for Chankan (or Kokushi Ankan Ron)
+                is_chankan = action.type == ActionType.KAKAN
+                is_ankan = action.type == ActionType.ANKAN
+
+                ronners = self._get_ron_potential(action.tile, is_chankan=is_chankan, is_ankan=is_ankan)
+
+                if ronners:
+                    # Phase WAIT_RESPONSE to allow Chankan
+                    self.phase = Phase.WAIT_RESPONSE
+                    self.active_players = ronners
+                    self.pending_kan = (self.current_player, action)
+                    self.last_discard = {"seat": self.current_player, "tile": action.tile}
+                    
+                    # Populate current_claims so Ron actions appear in observations
+                    self.current_claims = {}
+                    for pid in ronners:
+                        self.current_claims.setdefault(pid, []).append(Action(ActionType.RON, tile=action.tile))
+                    
+                    if os.environ.get("DEBUG"):
+                        print(f"DEBUG: Chankan potential detected from {ronners}")
+                    return self._get_observations(self.active_players)
+
+                # Move drawn tile to hand for processing if needed
                 if self.drawn_tile is not None:
                     self.hands[self.current_player].append(self.drawn_tile)
                     self.drawn_tile = None
@@ -645,37 +669,9 @@ class RiichiEnv:
             self.current_claims = {}
 
             # Ron Check (Priority 1)
-            ron_potential = []
-            for pid in range(4):
-                if pid == self.current_player:
-                    continue
-                # Calc Ron
-                # player_wind: (pid - oya + 4) % 4
-                p_wind = (pid - self.oya + 4) % 4
-                # NOTE: カンをすると王牌から一枚引くので牌山は一枚減る。カンされた後でこの判定式で河底撈魚を扱えるかは後で要検討
-                is_houtei = len(self.wall) <= 14
-                if os.environ.get("DEBUG"):
-                    print(
-                        f"DEBUG: Kyoku {getattr(self, 'kyoku_idx', '?')} - Ron Check for pid {pid} on tile {discard_tile_id} ({cvt.tid_to_mpsz(discard_tile_id)}) wall={len(self.wall)} is_houtei={is_houtei} rinshan={self.is_rinshan_flag}"
-                    )
-                res = AgariCalculator(self.hands[pid], self.melds.get(pid, [])).calc(
-                    discard_tile_id,
-                    dora_indicators=self.dora_indicators,
-                    conditions=Conditions(
-                        tsumo=False,
-                        riichi=self.riichi_declared[pid],
-                        double_riichi=self.double_riichi_declared[pid],
-                        ippatsu=self.ippatsu_eligible[pid],
-                        player_wind=p_wind,
-                        round_wind=self._custom_round_wind,
-                        houtei=is_houtei,
-                    ),
-                )
-                if os.environ.get("DEBUG"):
-                    print(f"DEBUG: Kyoku {getattr(self, 'kyoku', '?')} - Ron Result for pid {pid}: agari={res.agari}")
-                if res.agari:
-                    ron_potential.append(pid)
-                    self.current_claims.setdefault(pid, []).append(Action(ActionType.RON, tile=discard_tile_id))
+            ron_potential = self._get_ron_potential(discard_tile_id, is_chankan=False)
+            for pid in ron_potential:
+                self.current_claims.setdefault(pid, []).append(Action(ActionType.RON, tile=discard_tile_id))
 
             # Pon/Kan Check (Priority 2)
             # Valid for all other players
@@ -781,18 +777,7 @@ class RiichiEnv:
                     has_melds = sum(len(m) for m in self.melds.values()) > 0
                     is_first_turn = has_discards and not has_melds
 
-                    cond = Conditions(
-                        tsumo=False,
-                        riichi=self.riichi_declared[winner],
-                        double_riichi=self.double_riichi_declared[winner],
-                        ippatsu=self.ippatsu_eligible[winner],
-                        player_wind=(winner - self.oya + 4) % 4,
-                        haitei=False,
-                        houtei=(len(self.wall) <= 14),
-                        chankan=False,
-                        tsumo_first_turn=is_first_turn,
-                        round_wind=self._custom_round_wind,
-                    )
+                    is_chankan = self.pending_kan is not None
 
                     # Prepare Dora/Ura
                     ura_indicators_tid = []
@@ -800,7 +785,21 @@ class RiichiEnv:
                         ura_indicators_tid = self._get_ura_markers_tid()
 
                     res = AgariCalculator(self.hands[winner], self.melds.get(winner, [])).calc(
-                        tile, dora_indicators=self.dora_indicators, ura_indicators=ura_indicators_tid, conditions=cond
+                        tile,
+                        dora_indicators=self.dora_indicators,
+                        ura_indicators=ura_indicators_tid,
+                        conditions=Conditions(
+                            tsumo=False,
+                            riichi=self.riichi_declared[winner],
+                            double_riichi=self.double_riichi_declared[winner],
+                            ippatsu=self.ippatsu_eligible[winner],
+                            player_wind=(winner - self.oya + 4) % 4,
+                            haitei=False,
+                            houtei=(len(self.wall) <= 14),
+                            chankan=is_chankan,
+                            tsumo_first_turn=is_first_turn,
+                            round_wind=self._custom_round_wind,
+                        ),
                     )
                     self.agari_results[winner] = res
 
@@ -858,6 +857,7 @@ class RiichiEnv:
 
                 # Reset Rinshan flag
                 self.is_rinshan_flag = False
+                self.pending_kan = None
 
                 self.phase = Phase.WAIT_ACT
                 self.active_players = []
@@ -923,7 +923,39 @@ class RiichiEnv:
 
                 return self._get_observations(self.active_players)
 
-            # If no Claim -> Pass -> Next Draw
+            # If no Claim -> Pass -> Next Action
+            # Case 1: Was Chankan check
+            if self.pending_kan is not None:
+                claimer, action = self.pending_kan
+                self.pending_kan = None
+
+                # Proceed with regular Kan logic
+                if self.drawn_tile is not None:
+                    self.hands[claimer].append(self.drawn_tile)
+                    self.drawn_tile = None
+                self.hands[claimer].sort()
+
+                self.is_rinshan_flag = True
+                self.ippatsu_eligible = [False] * 4
+
+                self._execute_claim(claimer, action)
+
+                if len(self.wall) <= 14:
+                    self.is_done = True
+                    self.mjai_log.append({"type": "ryukyoku", "reason": "exhaustive_draw"})
+                    self.mjai_log.append({"type": "end_kyoku"})
+                    self.mjai_log.append({"type": "end_game"})
+                    return self._get_observations([])
+
+                self.current_player = claimer
+                self.drawn_tile = self.wall.pop(0)
+                self.mjai_log.append({"type": "tsumo", "actor": self.current_player, "tile": _to_mjai_tile(self.drawn_tile)})
+
+                self.phase = Phase.WAIT_ACT
+                self.active_players = [self.current_player]
+                return self._get_observations(self.active_players)
+
+            # Case 2: Regular discard pass
             self.current_player = (self.current_player + 1) % 4
             self.phase = Phase.WAIT_ACT
             self.active_players = [self.current_player]
@@ -1492,3 +1524,41 @@ class RiichiEnv:
         Return ura dora markers from the wall as MJAI strings.
         """
         return [_to_mjai_tile(t) for t in self._get_ura_markers_tid()]
+
+    def _get_ron_potential(self, tile: int, is_chankan: bool, is_ankan: bool = False) -> list[int]:
+        """
+        Calculates Ron potential for a given tile.
+        """
+        ronners = []
+        for pid in range(4):
+            if pid == self.current_player:
+                continue
+
+            # player_wind: (pid - oya + 4) % 4
+            p_wind = (pid - self.oya + 4) % 4
+            # NOTE: カンをすると王牌から一枚引くので牌山は一枚減る。カンされた後でこの判定式で河底撈魚を扱えるかは後で要検討
+            is_houtei = len(self.wall) <= 14
+            
+            # Ankan Ron is only possible for Kokushi Musou
+            # We will check this after Agari calculation.
+
+            res = AgariCalculator(self.hands[pid], self.melds.get(pid, [])).calc(
+                tile,
+                dora_indicators=self.dora_indicators,
+                conditions=Conditions(
+                    tsumo=False,
+                    riichi=self.riichi_declared[pid],
+                    double_riichi=self.double_riichi_declared[pid],
+                    ippatsu=self.ippatsu_eligible[pid],
+                    player_wind=p_wind,
+                    round_wind=self._custom_round_wind,
+                    houtei=is_houtei,
+                    chankan=is_chankan,
+                ),
+            )
+            if res.agari:
+                # Extra check for Ankan: must be Kokushi
+                if is_ankan and not (res.han >= 13 and any(y == 42 or y == 49 for y in res.yaku)):
+                    continue
+                ronners.append(pid)
+        return ronners

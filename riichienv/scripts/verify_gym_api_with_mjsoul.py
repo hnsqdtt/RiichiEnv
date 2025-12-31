@@ -217,32 +217,21 @@ class MjsoulEnvVerifier:
                 logger.debug(f"DEBUG: Player 0 Hand Size Mismatch! Size= {len(self.obs_dict[player_id].hand)}")
 
         # Discard Step ====================
+        # obs.legal_actions() に牌譜をトレースするアクションが存在するか確認して、それを選択してステップを進める
         target_mpsz = event["data"]["tile"]
-        target_tid = cvt.mpsz_to_tid(target_mpsz)
-        
-        # Smart scan: If canonical TID not in hand, try to find matching tile in hand
-        # Only if we have OBS access (we might not if step(RIICHI) failed to return useful obs, but usually we do)
-        # Note: self.obs_dict was updated by Riichi step if applicable.
-        if player_id in self.obs_dict:
-            found_tid = None
-            for tid in self.obs_dict[player_id].hand:
-                if cvt.tid_to_mpsz(tid) == target_mpsz:
-                    found_tid = tid
-                    break
-            if found_tid is not None:
-                # print(f">> FOUND matching tile {found_tid} ({target_mpsz}) in hand. Using it.")
-                target_tid = found_tid
-        
-        action = Action(ActionType.DISCARD, tile=target_tid)
-        
-        self.obs_dict = self.env.step({player_id: action})
+        actions = [a for a in self.obs_dict[player_id].legal_actions() if a.type == ActionType.DISCARD and cvt.tid_to_mpsz(a.tile) == target_mpsz]
+        assert len(actions) > 0, "No discard action found."
+        self.obs_dict = self.env.step({player_id: actions[0]})
 
     def _liuju(self, event: Any) -> None:
+        # 流局
+        # 1: 九種九牌, 2: 四風連打, 3: 四槓散了, 4: 四家立直
+        # TODO: verification する。いまのデータは event 内のデータが抜けているので検証できない
         if self._verbose:
             logger.warning("liuju event: {}".format(json.dumps(event)))
 
-        # Often happens on current_player's turn if Kyuhsu Kyuhai
-        self.obs_dict = self.env._get_observations(self.env.active_players)
+        # 九種九牌のアクションが存在するか確認して、それを選択してステップを進める
+        # self.obs_dict = self.env._get_observations(self.env.active_players)
         for pid, obs in self.obs_dict.items():
             if self._verbose:
                 print(f">> legal_actions() {pid} {obs.legal_actions()}")
@@ -262,275 +251,69 @@ class MjsoulEnvVerifier:
         is_zimo = any(h.get("zimo", False) for h in event["data"]["hules"])
 
         # If Zimo, we must be in WAIT_ACT. If in WAIT_RESPONSE, auto-pass.
-        if is_zimo and self.env.phase == Phase.WAIT_RESPONSE:
-            if self._verbose:
-                print(">> DETECTED Zimo Hule while in WAIT_RESPONSE. Auto-passing previous discard claims.")
-            while self.env.phase == Phase.WAIT_RESPONSE:
-                self.obs_dict = self.env.step({pid: Action(ActionType.PASS) for pid in self.obs_dict.keys()})
-            if self._verbose:
-                print(f">> ADVANCED TO PHASE: {self.env.phase}, Active: {self.env.active_players}")
-
-        if self._verbose or True: # Force debug
-            if os.environ.get("DEBUG"):
-                print(f">> DEBUG: START _hule. Kyoku {self.kyoku_idx}. event hules {[h['seat'] for h in event['data']['hules']]}, obs_dict.keys={list(self.obs_dict.keys())}")
-        
-        active_players = list(self.obs_dict.keys())
-        
-        # Validation checks
         if is_zimo:
-            if self.env.phase != Phase.WAIT_ACT:
-                if self._verbose:
-                    print(f">> WARNING: Zimo Hule but Phase is {self.env.phase} (Expected WAIT_ACT).")
-                return
+            assert self.env.phase == Phase.WAIT_ACT, "Zimo Hule should be in WAIT_ACT"
         else:
-            # Ron
-            if self.env.phase != Phase.WAIT_RESPONSE:
-                if self._verbose:
-                    print(f">> WARNING: Ron Hule but Phase is {self.env.phase} (Expected WAIT_RESPONSE).")
-                return
+            assert self.env.phase == Phase.WAIT_RESPONSE, "Ron Hule should be in WAIT_RESPONSE"
 
-        if self._verbose:
-            print(f">> HULE EVENT DATA: {event}")
-            print(f">> ENV PHASE: {self.env.phase}")
-            print(f">> ENV current_player: {self.env.current_player}")
-            print(f">> ENV drawn_tile: {self.env.drawn_tile} ({cvt.tid_to_mpsz(self.env.drawn_tile) if self.env.drawn_tile is not None else 'None'})")
-            print(f">> ENV active_players: {self.env.active_players}")
-            print(f">> ENV wall len: {len(self.env.wall)}")
+        active_players = list(self.obs_dict.keys())
+
+        if self._verbose or os.environ.get("DEBUG"):
+            logger.debug(f">> DEBUG: START _hule. Kyoku {self.kyoku_idx}. event hules {[h['seat'] for h in event['data']['hules']]}, obs_dict.keys={list(self.obs_dict.keys())}")
+            logger.debug(f">> HULE EVENT DATA: {event}")
+            logger.debug(f">> ENV PHASE: {self.env.phase}")
+            logger.debug(f">> ENV current_player: {self.env.current_player}")
+            logger.debug(f">> ENV drawn_tile: {self.env.drawn_tile} ({cvt.tid_to_mpsz(self.env.drawn_tile) if self.env.drawn_tile is not None else 'None'})")
+            logger.debug(f">> ENV active_players: {self.env.active_players}")
+            logger.debug(f">> ENV wall len: {len(self.env.wall)}")
             for pid in range(4):
                 for meld in self.env.melds[pid]:
-                    print(f"Meld: {meld.meld_type} {cvt.tid_to_mpsz_list(meld.tiles)} opened={meld.opened}")
-                print(f">> ENV hands[{pid}] len: {len(self.env.hands[pid])}")
-                print(f">> ENV hands[{pid}] content: {cvt.tid_to_mpsz_list(self.env.hands[pid])}")
-
-                print(f">> ENV hands[{pid}] content: {cvt.tid_to_mpsz_list(self.env.hands[pid])}")
+                    logger.debug(f"Meld: {meld.meld_type} {cvt.tid_to_mpsz_list(meld.tiles)} opened={meld.opened}")
+                logger.debug(f">> ENV hands[{pid}] len: {len(self.env.hands[pid])}")
+                logger.debug(f">> ENV hands[{pid}] content: {cvt.tid_to_mpsz_list(self.env.hands[pid])}")
 
         winning_actions = {}
-        
         # Phase 1: Preparation and Hand Repair
         for hule in event["data"]["hules"]:
             player_id = hule["seat"]
             
             # Brute Force Hand Repair if inactive or Agari check fails
-            if player_id not in active_players:
-                if self._verbose:
-                    print(f">> WARNING: Winner {player_id} inactive. Attempting Brute Force Hand Repair.")
-                
-                # Check current hand validity
-                obs = self.obs_dict[player_id] if player_id in self.obs_dict else None
-                if not obs:
-                    # Force refresh obs
-                    # Note: Using _get_observations might rely on current state.
-                    # If player inactive, might not be returned?
-                    # RiichiEnv._get_observations takes a list of pids.
-                    self.obs_dict.update(self.env._get_observations([player_id]))
-                    obs = self.obs_dict[player_id]
-                
-                hand_backup = list(self.env.hands[player_id])
-                winning_tile_tid = cvt.mpsz_to_tid(hule["hu_tile"])
-                # We don't know the exact winning tile ID used in Agari, but AgariCalculator takes TID/4.
-                # Assuming win tile is NOT in hand (Ron).
-                
-                found_valid = False
-                
-                # Iterate tiles in hand to swap (The "Garbage")
-                for i in range(len(hand_backup)):
-                    original_tile = hand_backup[i]
-                    
-                    # Try swapping with every possible tile type (0..33 * 4)
-                    # Optimization: Try neighbors or common tiles first? No, brute force 136.
-                    # Actually just 34 types.
-                    for target_type in range(34):
-                        # Construct a candidate 136-tile ID.
-                        # We need finding an AVAILABLE ID for this type?
-                        # Since AgariCalculator reduces to 34, ANY ID of that type works for Agari check.
-                        # We can just pick `target_type * 4`.
-                        candidate_tid = target_type * 4
-                        
-                        # Construct trial hand
-                        trial_hand = list(hand_backup)
-                        trial_hand[i] = candidate_tid
-                        
-                        # Check Agari
-                        # We need AgariCalculator
-                        # And Conditions
-                        # Construct Conditions? Not easy.
-                        # BUT we can check BASIC AGARI first.
-                        # If Basic Agari is False, skip.
-                        
-                        # Use internal AgariCalculator
-                        # Need Melds
-                        melds = self.env.melds[player_id]
-                        
-                        # Add win tile?
-                        trial_hand_with_win = list(trial_hand)
-                        if not hule["zimo"]:
-                            trial_hand_with_win.append(winning_tile_tid)
-                        
-                        calc = AgariCalculator(trial_hand_with_win, melds)
-                        # We pass dummy conditions just to check 'agari' bool.
-                        # Minimal conditions
-                        dummy_cond = Conditions()
-                        res = calc.calc(win_tile=winning_tile_tid, dora_indicators=[], conditions=dummy_cond, ura_indicators=[])
-                        
-                        if res.agari:
-                            # Candidate found!
-                            # Verify if Yaku is plausible?
-                            # Score check?
-                            # If we assume Hand Repair is last resort, accept first Valid Agari.
-                            # Or check if Yaku exists.
-                            if len(res.yaku) > 0:
-                                if self._verbose:
-                                    print(f">> REPAIR SUCCESS provided Agari. Swapped {cvt.tid_to_mpsz(original_tile)} -> {cvt.tid_to_mpsz(candidate_tid)}")
-                                
-                                # Apply Patch
-                                self.env.hands[player_id] = trial_hand
-                                
-                                # CRITICAL FIX: Re-calculate current_claims!
-                                # Env caches claims. We must update them for this player.
-                                if self.env.last_discard:
-                                    last_tile = self.env.last_discard["tile"]
-                                    
-                                    # Validate Agari again with correct context? 
-                                    # We already did res.agari check above.
-                                    # Just inject the action if verified.
-                                    
-                                    # But let's be careful. Check Furiten?
-                                    # Env check:
-                                    # res = AgariCalculator(hands, melds).calc(last_tile, conditions...)
-                                    # We just did that.
-                                    
-                                    print(f">> TRUST: Injecting RON action into current_claims for Player {player_id}")
-                                    ron_action = Action(ActionType.RON, tile=last_tile)
-                                    if player_id not in self.env.current_claims:
-                                        self.env.current_claims[player_id] = []
-                                    
-                                    # Avoid duplicates
-                                    has_ron = any(a.type == ActionType.RON for a in self.env.current_claims[player_id])
-                                    if not has_ron:
-                                        self.env.current_claims[player_id].append(ron_action)
-                                    
-                                    # Also need to ensure player is in active_players?
-                                    if player_id not in self.env.active_players:
-                                         self.env.active_players.append(player_id)
-                                         self.env.active_players.sort()
-                                    
-                                    # Also ensure Phase is WAIT_RESPONSE?
-                                    if self.env.phase != Phase.WAIT_RESPONSE:
-                                         print(f">> WARNING: Phase is {self.env.phase}, forcing WAIT_RESPONSE for injected claim.")
-                                         self.env.phase = Phase.WAIT_RESPONSE
+            assert player_id in active_players, f"Winner {player_id} inactive."
 
-                                # Update obs_dict
-                                self.obs_dict.update(self.env._get_observations([player_id]))
-                                active_players = list(self.env.active_players) # Refresh local var
-                                found_valid = True
-                                break
-                    if found_valid:
-                        break
-                
-                if not found_valid:
-                    if self._verbose:
-                        print(">> REPAIR FAILED. Could not find valid hand.")
-                # else:
-                #     # If repaired, we might need to bypass assertion or trick env
-                #     # We can proceed to assertions.
-                #     pass
+            # # Proceed with verification
+            # if player_id not in self.obs_dict:
+            #     self.obs_dict.update(self.env._get_observations([player_id]))
 
-            # Proceed with verification
-            # assert player_id in active_players
-            # If we repaired, player_id might NOT be in active_players (cached).
-            # But we can check legal_actions now.
-            if player_id not in self.obs_dict:
-                self.obs_dict.update(self.env._get_observations([player_id]))
-            
             obs = self.obs_dict[player_id]
             legal_ron = any(a.type in {ActionType.RON, ActionType.TSUMO} for a in obs.legal_actions())
-            
-            if not legal_ron:
-                if self._verbose:
-                    print(f">> WARNING: Even after repair (or check), Player {player_id} has no RON/TSUMO.")
-                    # Diagnose why Agari is False in Env context
-                    # Re-run Env logic
-                    p_wind = (player_id - self.env.oya + 4) % 4
-                    is_houtei = (not self.env.wall)
-                    dummy_cond = Conditions(
-                        tsumo=False,
-                        riichi=self.env.riichi_declared[player_id],
-                        player_wind=p_wind,
-                        round_wind=self.env._custom_round_wind,
-                        houtei=is_houtei,
-                    )
-                    calc = AgariCalculator(self.env.hands[player_id], self.env.melds.get(player_id, []))
-                    # Last discard?
-                    # We are in Hule event. The win tile is hule["hu_tile"].
-                    # Env uses last discard for Ron.
-                    # Check if last discard matches?
-                    win_tile_tid = cvt.mpsz_to_tid(hule["hu_tile"])
-                    # win_tile_tid // 4
-                     
-                    res = calc.calc(win_tile=win_tile_tid, dora_indicators=self.env.dora_indicators, conditions=dummy_cond, ura_indicators=[])
-                    print(f">> DIAGNOSE: Hand Agari={res.agari}, Yaku={res.yaku}, Han={res.han}")
-                    if not res.agari:
-                        print(f">> DIAGNOSE: Hand INVALID even with correct tiles? Check Yaku conditions.")
-                    else:
-                        print(f">> DIAGNOSE: Hand VALID in isolation. Env filtering? Furiten?")
-            else:
-                if self._verbose:
-                    print(f">> Player {player_id} VALID for Win after repair check.")
+            assert legal_ron, f"Player {player_id} has no RON/TSUMO."
 
-            # assert player_id in active_players
-            # Loose assertion
-            # if not legal_ron:
-            #     pass # We will fail later in calculate check probably
-            #     # Or assert here
-            #     assert False, f"Player {player_id} cannot win (No RON action)."
-            
             # Continue logic
             obs = self.obs_dict[player_id]
             match_actions = [a for a in obs.legal_actions() if a.type in {ActionType.RON, ActionType.TSUMO}]
-            
-            if len(match_actions) != 1:
-                if self._verbose:
-                    print(f">> WARNING: Expected 1 winning action, found {len(match_actions)}: {match_actions}")
-                    print(f">> Hand: {cvt.tid_to_mpsz_list(obs.hand)}")
-                # assert len(match_actions) > 0, "No winning actions found"
-            
-            if len(match_actions) > 0:
-                 winning_actions[player_id] = match_actions[0]
-            else:
-                 # Fallback if assert avoided?
-                 if self._verbose:
-                      print(f">> ERROR: No winning action for {player_id}, cannot add to step.")
+
+            assert len(match_actions) == 1
+            winning_actions[player_id] = match_actions[0]
 
         # Phase 2: Execution
         step_actions = winning_actions.copy()
+
         # If in WAIT_RESPONSE (Ron), others might need to PASS
         for pid in self.obs_dict.keys():
             if pid not in step_actions:
-                 # Only if active? 
-                 # obs_dict contains observations for active players usually?
-                 # RiichiEnv step takes actions for ALL active players.
-                 # We should check self.env.active_players just to be safe?
-                 # Relying on obs_dict keys which should mimic active players.
-                 step_actions[pid] = Action(ActionType.PASS)
-        
-        if self._verbose or True: # Force debug
-             if os.environ.get("DEBUG"):
-                 print(f">> DEBUG: BEFORE STEP. active_players={self.env.active_players}, obs_dict.keys={list(self.obs_dict.keys())}, step_actions.keys={list(step_actions.keys())}")
-            
+                step_actions[pid] = Action(ActionType.PASS)
+
         self.obs_dict = self.env.step(step_actions)
 
         # Phase 3: Verification
         for hule in event["data"]["hules"]:
             player_id = hule["seat"]
-            
-            # Retrieve Action used
             if player_id not in winning_actions:
-                 # Should have failed earlier if strict, but let's skip/fail now
-                 if self._verbose:
-                     print(f">> WARNING: Player {player_id} had no winning action recorded, skipping verification.")
-                 continue
+                continue
+
+            # legal_actions() から取り出した hule に対応する action
             action = winning_actions[player_id]
-            
+
             # Ura Doras
             ura_indicators = []
             if "li_doras" in hule:
@@ -542,64 +325,32 @@ class MjsoulEnvVerifier:
             
             if action.type == ActionType.TSUMO:
                 winning_tile = self.env.drawn_tile
-                if winning_tile is None:
-                    # Fallback if drawn_tile is somehow None (shouldn't be reachable if logic holds)
-                    if self._verbose:
-                        print(">> WARNING: Tsumo but drawn_tile is None. Poking event data.")
-                    winning_tile = cvt.mpsz_to_tid(hule["hu_tile"])
+                assert self.env.drawn_tile is not None, "Tsumo but drawn_tile is None."
 
             if self._verbose:
                 print(">> HULE", hule)
                 print(">> HAND", cvt.tid_to_mpsz_list(hand_for_calc))
                 print(">> WIN TILE", cvt.tid_to_mpsz(winning_tile))
 
-            # Execute the winning action in the environment to populate agari_results
-            # This was done in Phase 2. Now we just retrieve.
-
-            # Calculate winds (Post-step, but env info should be preserved until reset)
-            # self.env.mjai_log[1] is start_kyoku.
-            start_kyoku = self.env.mjai_log[1]
-            bakaze_str = start_kyoku["bakaze"]
-            bakaze_map = {"E": 0, "S": 1, "W": 2, "N": 3}
-            round_wind = bakaze_map.get(bakaze_str, 0)
-            
-            oya = start_kyoku["oya"]
-            player_wind_val = (player_id - oya + 4) % 4
-            
             # Retrieve Agari result calculated by the environment
             if player_id not in self.env.agari_results:
                 raise KeyError(f"Player {player_id} not found in agari_results. Action type: {action.type}. Step presumably failed to register win.")
             
             calc = self.env.agari_results[player_id]
-
-            if self._verbose:
-                print(">> AGARI", calc)
-                print("SIMULATOR", self.env.mjai_log[1])
-                # print("OBS player_id", obs.player_id) # Obs might be empty/new after done
-                # print("OBS (HAND)", cvt.tid_to_mpsz_list(obs.hand))
-                print("ENV (HAND)", cvt.tid_to_mpsz_list(self.env.hands[player_id]))
-                print("ENV (MELDS)")
-                for meld in self.env.melds[player_id]:
-                    print(meld.meld_type, cvt.tid_to_mpsz_list(meld.tiles))
-                print("ACTUAL", event)
-
             assert calc.agari
             assert calc.yakuman == hule["yiman"]
             
             if action.type == ActionType.TSUMO:
                 # Tsumo Score Check
-                # Use split scores from log if available
-                # Note: MJSoul logs sometimes have weird point_rong totals for Zimo, so checking components is safer.
-                
                 # Check Ko payment
                 if "point_zimo_xian" in hule and hule["point_zimo_xian"] > 0:
                     if calc.tsumo_agari_ko != hule["point_zimo_xian"]:
-                        print(f">> TSUMO KO MISMATCH: Mine {calc.tsumo_agari_ko}, Expected {hule['point_zimo_xian']}")
-                        print(f">> Calculated Yaku IDs: {calc.yaku}")
-                        print(f">> Calculated Han: {calc.han}")
-                        print(f">> Calculated Fu: {calc.fu}")
-                        print(f">> Expected Fans: {hule.get('fans')}")
-                        print(f">> Expected Fu: {hule.get('fu')}")
+                        logger.debug(f">> TSUMO KO MISMATCH: Mine {calc.tsumo_agari_ko}, Expected {hule['point_zimo_xian']}")
+                        logger.debug(f">> Calculated Yaku IDs: {calc.yaku}")
+                        logger.debug(f">> Calculated Han: {calc.han}")
+                        logger.debug(f">> Calculated Fu: {calc.fu}")
+                        logger.debug(f">> Expected Fans: {hule.get('fans')}")
+                        logger.debug(f">> Expected Fu: {hule.get('fu')}")
                     assert calc.tsumo_agari_ko == hule["point_zimo_xian"]
                 
                 # Check Oya Payment (if not Dealer)
@@ -607,46 +358,44 @@ class MjsoulEnvVerifier:
                 if player_id != self.env.oya:
                     if "point_zimo_qin" in hule and hule["point_zimo_qin"] > 0:
                         if calc.tsumo_agari_oya != hule["point_zimo_qin"]:
-                            print(f">> TSUMO OYA MISMATCH: Mine {calc.tsumo_agari_oya}, Expected {hule['point_zimo_qin']}")
-                            print(f">> Calculated Yaku IDs: {calc.yaku}")
-                            print(f">> Calculated Han: {calc.han}")
-                            print(f">> Calculated Fu: {calc.fu}")
-                            print(f">> Expected Fans: {hule.get('fans')}")
-                            print(f">> Expected Fu: {hule.get('fu')}")
+                            logger.debug(f">> TSUMO OYA MISMATCH: Mine {calc.tsumo_agari_oya}, Expected {hule['point_zimo_qin']}")
+                            logger.debug(f">> Calculated Yaku IDs: {calc.yaku}")
+                            logger.debug(f">> Calculated Han: {calc.han}")
+                            logger.debug(f">> Calculated Fu: {calc.fu}")
+                            logger.debug(f">> Expected Fans: {hule.get('fans')}")
+                            logger.debug(f">> Expected Fu: {hule.get('fu')}")
                         assert calc.tsumo_agari_oya == hule["point_zimo_qin"]
                 
             else:
                 if calc.ron_agari != hule["point_rong"]:
-                    print(f">> RON POINT MISMATCH: Mine {calc.ron_agari}, Expected {hule['point_rong']}")
-                    print(f">> Calculated Yaku IDs: {calc.yaku}")
-                    print(f">> Calculated Han: {calc.han}")
-                    print(f">> Calculated Fu: {calc.fu}")
-                    print(">> Expected Yaku IDs: {}".format(str([x["id"] for x in hule.get('fans', [])])))
-                    print(f">> Expected Han: {hule.get('count')}")
-                    print(f">> Expected Fu: {hule.get('fu')}")
-                    print(f">> Hand: {cvt.tid_to_mpsz_list(self.env.hands[player_id])}")
-                    print(f">> Win Tile: {hule['hu_tile']}")
-                    print(f">> Is Oya: {player_id == self.env.oya}")
+                    logger.debug(f">> RON POINT MISMATCH: Mine {calc.ron_agari}, Expected {hule['point_rong']}")
+                    logger.debug(f">> Calculated Yaku IDs: {calc.yaku}")
+                    logger.debug(f">> Calculated Han: {calc.han}")
+                    logger.debug(f">> Calculated Fu: {calc.fu}")
+                    logger.debug(">> Expected Yaku IDs: {}".format(str([x["id"] for x in hule.get('fans', [])])))
+                    logger.debug(f">> Expected Han: {hule.get('count')}")
+                    logger.debug(f">> Expected Fu: {hule.get('fu')}")
+                    logger.debug(f">> Hand: {cvt.tid_to_mpsz_list(self.env.hands[player_id])}")
+                    logger.debug(f">> Win Tile: {hule['hu_tile']}")
+                    logger.debug(f">> Is Oya: {player_id == self.env.oya}")
                 assert calc.ron_agari == hule["point_rong"]
-            # Relaxing assertion for now if needed, but original had it.
+
             try:
                 if hule.get("yiman", False):
                     # Yakuman check
                     assert calc.yakuman, "Expected Yakuman but calculator returned False"
                     # For Yakuman, hule["count"] is typically number of yakumans (1, 2, etc.)
-                    # AgariCalculator returns 13 Han for standard Yakuman.
-                    # We can skip strict Han/Fu check as points verification above covers it.
                     if self._verbose:
-                        print(f">> YAKUMAN VERIFIED. Count: {hule['count']}, Points: {calc.ron_agari or calc.tsumo_agari_ko + calc.tsumo_agari_oya}")
+                        logger.debug(f">> YAKUMAN VERIFIED. Count: {hule['count']}, Points: {calc.ron_agari or calc.tsumo_agari_ko + calc.tsumo_agari_oya}")
                 else:
                     if calc.han != hule["count"] or calc.fu != hule["fu"]:
-                        print(f">> HAN/FU MISMATCH: Mine {calc.han} Han {calc.fu} Fu, Expected {hule['count']} Han {hule['fu']} Fu")
-                        print(f">> Calculated Yaku IDs: {calc.yaku}")
+                        logger.debug(f">> HAN/FU MISMATCH: Mine {calc.han} Han {calc.fu} Fu, Expected {hule['count']} Han {hule['fu']} Fu")
+                        logger.debug(f">> Calculated Yaku IDs: {calc.yaku}")
                     assert calc.han == hule["count"]
                     assert calc.fu == hule["fu"]
             except AssertionError as e:
                 if self._verbose:
-                    print(f"Mismatch in Han/Fu/Yakuman: Rust calc han={calc.han} fu={calc.fu} yakuman={calc.yakuman}, Expected count={hule['count']} fu={hule['fu']} yiman={hule.get('yiman', False)}")
+                    logger.debug(f"Mismatch in Han/Fu/Yakuman: Rust calc han={calc.han} fu={calc.fu} yakuman={calc.yakuman}, Expected count={hule['count']} fu={hule['fu']} yiman={hule.get('yiman', False)}")
                 raise e
 
     def verify_kyoku(self, kyoku: Any) -> bool:
