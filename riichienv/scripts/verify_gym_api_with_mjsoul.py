@@ -27,7 +27,7 @@ from pathlib import Path
 import riichienv.convert as cvt
 from riichienv.action import ActionType, Action
 from riichienv.env import Phase
-from riichienv import ReplayGame, RiichiEnv, AgariCalculator, Conditions
+from riichienv import ReplayGame, RiichiEnv
 
 import logging
 
