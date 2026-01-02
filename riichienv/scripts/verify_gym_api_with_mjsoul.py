@@ -418,9 +418,6 @@ class MjsoulEnvVerifier:
             t_str = event["data"]["tile"]
             t_tid = cvt.mpsz_to_tid(t_str)
 
-            # Check Simulator State
-            curr_player = self.env.current_player
-            # drawn_tile is usually set in self.env.drawn_tile
             sim_drawn = self.env.drawn_tile
             assert sim_drawn is not None, "Drawn tile is not set while Env is in WAIT_RESPONSE"
             assert t_tid // 4 == sim_drawn // 4, "Drawn tile mismatch. Sim: {} Log: {}".format(cvt.tid_to_mpsz(sim_drawn), t_str)
