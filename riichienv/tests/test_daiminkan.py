@@ -1,6 +1,6 @@
+import riichienv.convert as cvt
 from riichienv import RiichiEnv
 from riichienv.action import Action, ActionType
-import riichienv.convert as cvt
 
 
 class TestDaiminkan:

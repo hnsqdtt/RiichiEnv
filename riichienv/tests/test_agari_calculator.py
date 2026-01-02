@@ -1,5 +1,4 @@
 import riichienv as rv
-import riichienv.convert as cvt
 
 
 def test_pinfu():

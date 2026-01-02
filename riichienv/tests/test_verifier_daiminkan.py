@@ -1,6 +1,5 @@
-import sys
 import os
-import pytest
+import sys
 from unittest.mock import MagicMock
 
 # Ensure we can import from scripts
@@ -8,9 +7,10 @@ from unittest.mock import MagicMock
 sys.path.append(os.path.join(os.getcwd(), "scripts"))
 
 from verify_gym_api_with_mjsoul import MjsoulEnvVerifier
+
+import riichienv.convert as cvt
 from riichienv import RiichiEnv
 from riichienv.action import Action, ActionType
-import riichienv.convert as cvt
 
 
 class TestVerifierSmartScan:

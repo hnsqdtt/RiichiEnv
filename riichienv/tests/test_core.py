@@ -55,7 +55,6 @@ def test_yaku_scenarios():
             "name": "Tanyao",
             "hand": "234m234p234s66m88s",
             "win_tile": "6m",
-            "win_tile": "6m",
             "min_han": 1,
             "yaku_check": lambda y: 12 in y,  # Tanyao ID 12
         },
@@ -185,7 +184,6 @@ def test_kyoku4_regression():
     standing = [48, 56, 12, 49, 24, 8, 16, 0, 25, 53, 26, 52, 44]
     win_tile = 0  # 1m
 
-    calc = AgariCalculator(standing, [])
     # Case 1: All 14 tiles passed to constructor
     temp_tiles = sorted(standing + [win_tile])
     calc2 = AgariCalculator(temp_tiles, [])

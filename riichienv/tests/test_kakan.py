@@ -1,5 +1,5 @@
-from riichienv import RiichiEnv, Meld, MeldType
-from riichienv.action import Action, ActionType
+from riichienv import Meld, MeldType, RiichiEnv
+from riichienv.action import ActionType
 
 
 class TestKakan:

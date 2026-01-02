@@ -1,8 +1,7 @@
-from riichienv import RiichiEnv
-from riichienv.action import Action, ActionType
-from riichienv import AgariCalculator
-from riichienv.hand import Conditions
 import riichienv.convert as cvt
+from riichienv import AgariCalculator, RiichiEnv
+from riichienv.action import Action, ActionType
+from riichienv.hand import Conditions
 
 
 class TestRiichiScoring:

@@ -1,5 +1,3 @@
-import sys
-import os
 import hashlib
 import random
 from dataclasses import dataclass, field
@@ -11,7 +9,6 @@ from ._riichienv import Meld, MeldType
 from .action import Action, ActionType
 from .game_mode import GameType
 from .hand import AgariCalculator, Conditions
-import riichienv.convert as cvt
 
 
 @dataclass
@@ -869,7 +866,7 @@ class RiichiEnv:
                 i = self.wall.index(d)
                 if i + 1 < len(self.wall):
                     res.append(self.wall[i + 1])
-            except:
+            except ValueError:
                 pass
         return res
 

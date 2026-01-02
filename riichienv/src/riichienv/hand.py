@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-import os
 
 from . import _riichienv as rust_core  # type: ignore
 from ._riichienv import (

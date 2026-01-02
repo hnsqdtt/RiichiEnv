@@ -1,4 +1,4 @@
-from riichienv import RiichiEnv, Meld, MeldType, Phase, convert
+from riichienv import Meld, MeldType, Phase, RiichiEnv, convert
 from riichienv.action import Action, ActionType
 
 
@@ -100,7 +100,7 @@ class TestChankan:
         env.step({0: kakan_action})
 
         # Player 1 performs PASS
-        obs_dict = env.step({1: Action(ActionType.PASS)})
+        env.step({1: Action(ActionType.PASS)})
 
         # Env should proceed with KAKAN execution and Rinshan Draw for Player 0
         assert env.phase == Phase.WAIT_ACT
@@ -108,7 +108,7 @@ class TestChankan:
         assert len(env.melds[0]) == 1
         assert env.melds[0][0].meld_type == MeldType.Addgang
         assert env.drawn_tile is not None
-        assert env.is_rinshan_flag == True
+        assert env.is_rinshan_flag
 
     def test_kokushi_ankan_ron(self):
         """
@@ -173,7 +173,7 @@ class TestChankan:
         env.active_players = [0]
 
         ankan_action = Action(ActionType.ANKAN, tile=111, consume_tiles=[108, 109, 110, 111])
-        obs_dict = env.step({0: ankan_action})
+        env.step({0: ankan_action})
 
         # Should NOT transition to WAIT_RESPONSE. Should immediately execute ANKAN.
         assert env.phase == Phase.WAIT_ACT

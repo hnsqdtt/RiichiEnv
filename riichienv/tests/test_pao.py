@@ -1,7 +1,5 @@
-import pytest
-from riichienv.env import RiichiEnv, Phase, Meld, MeldType
 from riichienv.action import Action, ActionType
-import riichienv.convert as cvt
+from riichienv.env import Meld, MeldType, Phase, RiichiEnv
 
 
 class TestPao:

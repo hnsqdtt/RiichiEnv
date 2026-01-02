@@ -1,6 +1,5 @@
-import pytest
-from riichienv.env import RiichiEnv
 import riichienv.convert as cvt
+from riichienv.env import RiichiEnv
 
 
 def test_can_pon_aka():

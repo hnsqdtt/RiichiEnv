@@ -1,7 +1,5 @@
-import pytest
-from riichienv.env import RiichiEnv, Phase, Meld, MeldType
 from riichienv.action import Action, ActionType
-from riichienv.hand import AgariCalculator, Conditions
+from riichienv.env import Meld, MeldType, Phase, RiichiEnv
 
 
 class TestPaoHonba:
@@ -21,9 +19,6 @@ class TestPaoHonba:
         # Actually let's use the log details or just a simple Yakuman setup.
         # Seat 3 hand: 3x 1m, 3x 2m, 3x 3m, 3x 4m, 2x 5m
         env.hands[3] = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16]
-        # Win on 5m (17)
-        winning_tile = 17
-
         # Establish Pao for Seat 3 (Winner) with Seat 0 (Pao)
         # Winner (Seat 3) has 2 dragon melds: White (124-126), Green (128-130)
         env.melds[3] = [

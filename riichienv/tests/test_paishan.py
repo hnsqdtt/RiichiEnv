@@ -1,5 +1,5 @@
-from riichienv import RiichiEnv
 import riichienv.convert as cvt
+from riichienv import RiichiEnv
 
 
 class TestPaishan:
@@ -39,7 +39,11 @@ class TestPaishan:
         assert uras[0] == cvt.tid_to_mjai(130)
 
     def test_real_dora_reveal(self):
-        paishan_wall_str = "3s9s1m5s9s3m9s4p7z1z3m6p3m3p5z1z2s7m5z2m7p3z7p7z5m5m5s6m6p4p3p4s7m7s4m6s9m5p5m6m3s2m3s9m3z4z4z1s8p4s7z8s1p1m9p9m8s4z6z2z1s4s2m3m8s3p1m7s8m2s1p2m6s1z9p3z8p6z5z2p2z2z1m7p4p7s6z6z6s5p8m9m3p2p3s7s7p6p2s9p6m1p5p1z6p2p4m7m5z9s2s4p5s0s4m3z8m1s2z6m7m0m6s1p8s8m8p4z1s0p9p4s4m2p7z8p"
+        paishan_wall_str = (
+            "3s9s1m5s9s3m9s4p7z1z3m6p3m3p5z1z2s7m5z2m7p3z7p7z5m5m5s6m6p4p3p4s7m7s4m6s9m5p5m6m3s2m3s9m3z4z4z1s8p4s7z8s1p1m9p"
+            "9m8s4z6z2z1s4s2m3m8s3p1m7s8m2s1p2m6s1z9p3z8p6z5z2p2z2z1m7p4p7s6z6z6s5p8m9m3p2p3s7s7p6p2s9p6m1p5p1z6p2p4m7m5z9s2s4p5s0s4m3z8m1s"
+            "2z6m7m0m6s1p8s8m8p4z1s0p9p4s4m2p7z8p"
+        )
         env = RiichiEnv()
         paishan_wall = cvt.paishan_to_wall(paishan_wall_str)
         env.reset(wall=paishan_wall)

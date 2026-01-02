@@ -1,6 +1,6 @@
-import pytest
-from riichienv.env import RiichiEnv, Action, ActionType, Phase
 from riichienv._riichienv import Meld, MeldType
+
+from riichienv.env import Action, ActionType, RiichiEnv
 
 
 def test_sufuurenta():
