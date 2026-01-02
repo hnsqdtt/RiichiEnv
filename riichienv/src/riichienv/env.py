@@ -876,8 +876,9 @@ class RiichiEnv:
                 i = self.wall.index(d)
                 if i + 1 < len(self.wall):
                     res.append(self.wall[i + 1])
-            except ValueError:
-                pass
+            except:
+                raise ValueError("Tile not found in wall")
+
         return res
 
     def _get_ron_potential(self, tile: int, is_chankan: bool, is_ankan: bool = False) -> list[int]:
