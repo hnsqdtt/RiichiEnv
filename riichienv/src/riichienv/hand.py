@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 
 from . import _riichienv as rust_core  # type: ignore
-from ._riichienv import (
+from ._riichienv import (  # type: ignore
     Meld,
-    Wind,  # type: ignore
+    Wind,
 )
 
 

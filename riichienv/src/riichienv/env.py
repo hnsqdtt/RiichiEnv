@@ -2,10 +2,10 @@ import hashlib
 import random
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any
+from typing import Any, cast
 
-from . import _riichienv
-from ._riichienv import Meld, MeldType
+from . import _riichienv  # type: ignore
+from ._riichienv import Meld, MeldType  # type: ignore
 from .action import Action, ActionType
 from .game_mode import GameType
 from .hand import AgariCalculator, Conditions
@@ -282,13 +282,13 @@ class RiichiEnv:
             },
         }
 
-        rule = preset_rules.get(preset_rule)
+        rule = cast(dict[str, Any], preset_rules.get(preset_rule))
         if rule is None:
             raise ValueError(f"Unknown preset rule: {preset_rule}")
 
-        soten_weight = rule["soten_weight"]
-        soten_base = rule["soten_base"]
-        jun_weight = rule["jun_weight"]
+        soten_weight = cast(int, rule["soten_weight"])
+        soten_base = cast(int, rule["soten_base"])
+        jun_weight = cast(list[int], rule["jun_weight"])
         ranks = self.ranks()
         return [
             int((self._scores[i] - soten_base) / 1000.0 * soten_weight + jun_weight[ranks[i] - 1]) for i in range(4)
@@ -311,6 +311,7 @@ class RiichiEnv:
                 self.mjai_log.append({"type": "reach", "actor": self.current_player})
                 return self._get_observations(self.active_players)
             elif action.type == ActionType.TSUMO:
+                assert self.drawn_tile is not None
                 ura_in = (
                     self._get_ura_markers_tid()
                     if (self.riichi_declared[self.current_player] or self.double_riichi_declared[self.current_player])
@@ -358,6 +359,7 @@ class RiichiEnv:
                 return self._get_observations([])
             elif action.type in [ActionType.ANKAN, ActionType.KAKAN]:
                 is_chankan = action.type == ActionType.KAKAN
+                assert action.tile is not None
                 ronners = self._get_ron_potential(action.tile, is_chankan=is_chankan, is_ankan=(not is_chankan))
                 if ronners:
                     self.phase, self.active_players, self.pending_kan = (
@@ -385,6 +387,7 @@ class RiichiEnv:
                 self.active_players = [self.current_player]
                 return self._get_observations(self.active_players)
             elif action.type == ActionType.DISCARD:
+                assert action.tile is not None
                 discard_tile_id = action.tile
                 is_reach_declaration = False
                 if self.riichi_stage[self.current_player]:
@@ -471,6 +474,7 @@ class RiichiEnv:
                     self.riichi_declared[self.current_player] = False
                     self.riichi_pending_acceptance = None
                 sorted_ronners = sorted(ronners, key=lambda p: (p - self.current_player + 4) % 4)
+                assert self.last_discard is not None
                 tile = self.last_discard["tile"]
                 for idx, winner in enumerate(sorted_ronners):
                     ura_in = (
@@ -704,6 +708,7 @@ class RiichiEnv:
         elif action.type == ActionType.ANKAN:
             m_type, opened = MeldType.Angang, False
         elif action.type == ActionType.KAKAN:
+            assert action.tile is not None
             m_type = MeldType.Addgang
             found = [
                 i
@@ -727,6 +732,7 @@ class RiichiEnv:
         if action.type == ActionType.ANKAN:
             tiles = sorted(action.consume_tiles)
         else:
+            assert action.tile is not None
             tiles = sorted(action.consume_tiles + [action.tile])
         self.melds[pid].append(Meld(m_type, tiles, opened))
         if from_pid is not None and m_type in [MeldType.Peng, MeldType.Gang]:
@@ -740,6 +746,7 @@ class RiichiEnv:
             ActionType.DAIMINKAN: "daiminkan",
             ActionType.ANKAN: "ankan",
         }
+        assert action.tile is not None
         self.mjai_log.append(
             {
                 "type": mj_types[action.type],
@@ -833,10 +840,13 @@ class RiichiEnv:
             if pao_pid is not None and loser != pao_pid:
                 # Discarder pays half of base Yakuman.
                 # Pao player pays half of base Yakuman + all of Honba points.
+                assert loser is not None
+                assert pao_pid is not None
                 deltas[loser] = -(s_base // 2)
                 deltas[pao_pid] = -(s_base // 2) - h_val * 300
                 deltas[winner] = s_total
             else:
+                assert loser is not None
                 deltas[loser], deltas[winner] = -s_total, s_total
         if include_bonus and self.riichi_sticks > 0:
             deltas[winner] += self.riichi_sticks * 1000
