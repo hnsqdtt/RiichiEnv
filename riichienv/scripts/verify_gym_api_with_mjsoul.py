@@ -298,9 +298,7 @@ class MjsoulEnvVerifier:
             # Brute Force Hand Repair if inactive or Agari check fails
             assert player_id in active_players, f"Winner {player_id} inactive."
 
-            # # Proceed with verification
-            # if player_id not in self.obs_dict:
-            #     self.obs_dict.update(self.env._get_observations([player_id]))
+            # Observations for each active player are assumed to be already present in self.obs_dict.
 
             obs = self.obs_dict[player_id]
             legal_ron = any(a.type in {ActionType.RON, ActionType.TSUMO} for a in obs.legal_actions())
