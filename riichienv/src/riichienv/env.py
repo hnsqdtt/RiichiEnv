@@ -2,7 +2,7 @@ import hashlib
 import random
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, cast
+from typing import Any
 
 from . import _riichienv  # type: ignore
 from ._riichienv import Meld, MeldType  # type: ignore
@@ -879,8 +879,8 @@ class RiichiEnv:
                 i = self.wall.index(d)
                 if i + 1 < len(self.wall):
                     res.append(self.wall[i + 1])
-            except:
-                raise ValueError("Tile not found in wall")
+            except ValueError as e:
+                raise e
 
         return res
 
