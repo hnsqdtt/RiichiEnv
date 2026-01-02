@@ -323,28 +323,9 @@ def paishan_to_wall(paishan_str: str) -> list[int]:
         # "0m" -> 16.
         # So "5m" and "0m" collide at base 16.
 
-        # Strategy:
-        # 1. Map to base IDs. 0m->16, 5m->16.
-        # 2. Track usage count for base 16.
-        #    If we see 16 used (e.g. from 0m), next request for 16 (from 5m) gets 17.
-        #    BUT we must ensure proper Red/Normal assignment if strictly required.
-        #    Paishan "0m" means specifically the Red tile. "5m" means Normal.
-        #    If we treat them all as bucket 16..19:
-        #    "0m" -> bucket 5m.
-        #    "5m" -> bucket 5m.
-        #    If we assign sequentially 16, 17, 18, 19...
-        #    Does 16 HAVE to be Red?
-        #    In `tid_to_mpsz`, 16 returns "0m". 17,18,19 return "5m".
-        #    So yes, 16 is Red.
-        #    We must ensure "0m" gets 16. "5m" gets 17, 18, 19.
-
-        # Revised Logic:
-        # If chunk is "0m", force ID 16.
-        # If chunk is "5m", force IDs 17, 18, 19.
-        # Generalize:
-        # "0x" -> RedID.
-        # "5x" -> NormalIDs.
-
+        # Assign a concrete tile ID from the base ID, ensuring consistency with
+        # `tid_to_mpsz`: 0m/0p/0s must map to the red IDs (16, 52, 88), and the
+        # corresponding 5m/5p/5s tiles must use the remaining non-red IDs.
         real_tid = tid_base
 
         # Red Handling
