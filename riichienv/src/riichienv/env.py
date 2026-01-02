@@ -188,6 +188,9 @@ class RiichiEnv:
         self.discards = {0: [], 1: [], 2: [], 3: []}
         self.melds = {0: [], 1: [], 2: [], 3: []}
 
+        # Internal backing store for player scores. External callers should use the
+        # public scores accessor (e.g. scores()) instead of touching _scores directly.
+        # Within this class, mutating _scores directly is intentional.
         if scores is not None:
             self._scores = scores[:]
         elif self._custom_initial_scores:
