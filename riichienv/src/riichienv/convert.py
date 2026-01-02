@@ -275,7 +275,6 @@ def paishan_to_wall(paishan_str: str) -> list[int]:
     for i in range(0, len(paishan_str), 2):
         chunk = paishan_str[i : i + 2]
         tid_base = mpsz_to_tid(chunk)
-        cnt = tid_count.get(tid_base, 0)
         real_tid = tid_base
 
         is_red_str = chunk.startswith("0")
