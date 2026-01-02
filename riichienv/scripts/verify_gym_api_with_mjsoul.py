@@ -667,7 +667,6 @@ class MjsoulEnvVerifier:
 
         else:
             print(f">> WARNING: Unhandled ChiPengGang type {event['data']['type']}")
-            pass
 
 
 def main(path: str, skip: int = 0, verbose: bool = False) -> None:
