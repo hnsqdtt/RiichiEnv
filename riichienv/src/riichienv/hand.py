@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 
 from . import _riichienv as rust_core  # type: ignore
-from ._riichienv import Wind  # type: ignore
-from .meld import Meld
+from ._riichienv import (  # type: ignore
+    Meld,
+    Wind,
+)
 
 
 @dataclass
@@ -122,28 +124,8 @@ class AgariCalculator:
     def __init__(self, tiles: list[int], melds: list[Meld] | None = None) -> None:
         self.tiles_136 = tiles
         self.melds = melds or []
-        rust_melds = []
-        for m in self.melds:
-            if isinstance(m, rust_core.Meld):
-                rust_melds.append(m)
-                continue
-
-            m_type = rust_core.MeldType.Chi
-            if m.type == Meld.PON:
-                m_type = rust_core.MeldType.Peng
-            elif m.type == Meld.KAN:
-                m_type = rust_core.MeldType.Gang if m.opened else rust_core.MeldType.Angang
-
-            rust_melds.append(
-                rust_core.Meld(
-                    m_type,
-                    m.tiles,  # Pass 136-tile IDs
-                    m.opened,
-                )
-            )
-
-        self.calc_rust = rust_core.AgariCalculator(self.tiles_136, rust_melds)
-        self._rust_melds = rust_melds
+        self._rust_melds = self.melds
+        self.calc_rust = rust_core.AgariCalculator(self.tiles_136, self._rust_melds)
 
     @staticmethod
     def hand_from_text(hand_str_repr: str) -> "AgariCalculator":
@@ -423,3 +405,6 @@ class AgariCalculator:
             han=res.han,
             fu=res.fu,
         )
+
+    def is_tenpai(self) -> bool:
+        return self.calc_rust.is_tenpai()

@@ -69,28 +69,58 @@ impl AgariCalculator {
     pub fn calc(
         &self,
         win_tile_136: u8,
-        dora_indicators_136: Vec<u8>,
-        ura_indicators_136: Vec<u8>,
+        dora_indicators: Vec<u8>,
+        ura_indicators: Vec<u8>,
         conditions: Conditions,
     ) -> Agari {
         let win_tile_34 = win_tile_136 / 4;
-        let is_agari = agari::is_agari(&self.hand);
+
+        // Clone and add win tile to create 14-tile hands for check
+        let mut hand_14 = self.hand.clone();
+        let mut full_hand_14 = self.full_hand.clone();
+
+        // Total tiles in agari-equivalent hand (Kans reduced to 3)
+        let current_total: u8 = hand_14.counts.iter().sum::<u8>() + (self.melds.len() as u8 * 3);
+
+        if current_total == 13 {
+            hand_14.add(win_tile_34);
+            full_hand_14.add(win_tile_34);
+        } else if current_total != 14 {
+            // Unexpected hand size, but we'll try detection anyway or return false?
+            // Usually it should be 14. If it's 11 (2 melds missing?), etc.
+            // But let's assume it should be 14 for calc.
+        }
+
+        if std::env::var("DEBUG").is_ok() {
+            eprintln!(
+                "DEBUG RUST: AgariCalculator::calc win_tile_136={} houtei={} haitei={} tsumo={}",
+                win_tile_136, conditions.houtei, conditions.haitei, conditions.tsumo
+            );
+        }
+        let is_agari = agari::is_agari(&hand_14);
+
         if !is_agari {
             return Agari::new(false, false, 0, 0, 0, vec![], 0, 0);
         }
 
-        // Count normal doras
+        // Count normal doras in 14-tile hand
         let mut dora_count = 0;
-        for &indicator_136 in &dora_indicators_136 {
+        for &indicator_136 in &dora_indicators {
             let next_tile_34 = get_next_tile(indicator_136 / 4);
-            dora_count += self.full_hand.counts[next_tile_34 as usize];
+            dora_count += full_hand_14.counts[next_tile_34 as usize];
         }
 
-        // Count ura doras
+        // Count ura doras in 14-tile hand
         let mut ura_dora_count = 0;
-        for &indicator_136 in &ura_indicators_136 {
+        for &indicator_136 in &ura_indicators {
             let next_tile_34 = get_next_tile(indicator_136 / 4);
-            ura_dora_count += self.full_hand.counts[next_tile_34 as usize];
+            ura_dora_count += full_hand_14.counts[next_tile_34 as usize];
+        }
+
+        // Handle red win_tile
+        let mut aka_dora = self.aka_dora_count;
+        if current_total == 13 && (win_tile_136 == 16 || win_tile_136 == 52 || win_tile_136 == 88) {
+            aka_dora += 1;
         }
 
         let ctx = yaku::YakuContext {
@@ -104,20 +134,21 @@ impl AgariCalculator {
             is_chankan: conditions.chankan,
             is_tsumo_first_turn: conditions.tsumo_first_turn,
             dora_count,
-            aka_dora: self.aka_dora_count,
+            aka_dora,
             ura_dora_count,
             bakaze: 27 + conditions.round_wind,
             jikaze: 27 + conditions.player_wind,
             is_menzen: self.melds.iter().all(|m| !m.opened),
         };
 
-        let yaku_res = yaku::calculate_yaku(&self.hand, &self.melds, &ctx, win_tile_34);
+        let _divisions = agari::find_divisions(&hand_14);
+        let yaku_res = yaku::calculate_yaku(&hand_14, &self.melds, &ctx, win_tile_34);
 
         let is_oya = conditions.player_wind == 0;
         let score_res = score::calculate_score(yaku_res.han, yaku_res.fu, is_oya, conditions.tsumo);
 
         Agari {
-            agari: true,
+            agari: !yaku_res.yaku_ids.is_empty() || yaku_res.yakuman_count > 0,
             yakuman: yaku_res.yakuman_count > 0,
             ron_agari: score_res.pay_ron,
             tsumo_agari_oya: score_res.pay_tsumo_oya,
@@ -126,6 +157,23 @@ impl AgariCalculator {
             han: yaku_res.han as u32,
             fu: yaku_res.fu as u32,
         }
+    }
+
+    pub fn is_tenpai(&self) -> bool {
+        let current_total: u8 = self.hand.counts.iter().sum::<u8>() + (self.melds.len() as u8 * 3);
+        if current_total != 13 {
+            return false;
+        }
+        for i in 0..crate::types::TILE_MAX {
+            let mut hand_14 = self.hand.clone();
+            if hand_14.counts[i] < 4 {
+                hand_14.add(i as u8);
+                if agari::is_agari(&hand_14) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

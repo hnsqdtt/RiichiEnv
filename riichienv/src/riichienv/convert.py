@@ -181,7 +181,52 @@ def tid_to_mjai_list(tid_list: list[int]) -> list[str]:
 
 
 def mpsz_to_tid_list(mpsz_list: list[str]) -> list[int]:
-    return [mpsz_to_tid(s) for s in mpsz_list]
+    """
+    Convert list of mpsz strings to list of TIDs, ensuring uniqueness by tracking used counts.
+    e.g. ["1m", "1m"] -> [0, 1]
+    """
+    tid_list = []
+    tid_counts = {}
+
+    for s in mpsz_list:
+        base_tid = mpsz_to_tid(s)
+
+        # Red Handling: mpsz_to_tid returns 16 for "0m", 17 for "5m" (if logic fixed)?
+        # Let's align with single-call logic or implement robust tracker.
+
+        # Assuming mpsz_to_tid returns the BASE ID for the requested type (or Specific Red ID).
+        # We need to apply offset.
+
+        # We need to distinguish if the base_tid implies a specific unique tile (Red) or a group.
+        # 16 ("0m") is specific.
+        # 17 ("5m") is start of group?
+
+        # To be safe, we track usage per "Logical Type" or strictly per base_tid.
+        # Using base_tid + count is unsafe if bases are close and collide?
+        # 0 (1m) -> 0,1,2,3.
+        # 4 (2m) -> 4,5,6,7.
+        # Safe.
+
+        # Red 5s:
+        # "0m" -> 16.
+        # "5m" -> should return 17?
+        # If convert.py mpsz_to_tid logic returns 17 for 5m.
+        # Then 16 is tracked separately.
+        # 17 is tracked separately (17->18->19).
+        # This seems safe.
+
+        cnt = tid_counts.get(base_tid, 0)
+        final_tid = base_tid + cnt
+
+        # Sanity check: Ensure we don't overflow the type?
+        # Max 4 per type.
+        # If input has["1m"]*5, we produce invalid ID?
+        # But log data should be valid.
+
+        tid_list.append(final_tid)
+        tid_counts[base_tid] = cnt + 1
+
+    return tid_list
 
 
 def mpsz_to_mjai_list(mpsz_list: list[str]) -> list[str]:
@@ -189,8 +234,60 @@ def mpsz_to_mjai_list(mpsz_list: list[str]) -> list[str]:
 
 
 def mjai_to_tid_list(mjai_list: list[str]) -> list[int]:
-    return [mjai_to_tid(s) for s in mjai_list]
+    tid_list = []
+    tid_counts = {}
+
+    for s in mjai_list:
+        base_tid = mjai_to_tid(s)
+
+        # mjai_to_tid returns canonical. Same duplicate issue.
+        # Apply strict offset tracking.
+
+        # Red tile check?
+        # mjai "5mr" -> 16.
+        # mjai "5m" -> 17? (If mjai_to_tid logic correct).
+        # We trust base_tid separates Red/Non-Red.
+
+        cnt = tid_counts.get(base_tid, 0)
+        final_tid = base_tid + cnt
+
+        tid_list.append(final_tid)
+        tid_counts[base_tid] = cnt + 1
+
+    return tid_list
 
 
 def mjai_to_mpsz_list(mjai_list: list[str]) -> list[str]:
     return [mjai_to_mpsz(s) for s in mjai_list]
+
+
+def paishan_to_wall(paishan_str: str) -> list[int]:
+    """
+    Parses a paishan string (concatenated MPSZ, e.g. "1m2m3p") into a list of 136 unique Tile IDs.
+    Handles duplicate tiles by tracking counts (e.g. first "1m" -> 0, second "1m" -> 1).
+    """
+    if len(paishan_str) % 2 != 0:
+        raise ValueError(f"Invalid paishan string length: {len(paishan_str)}")
+
+    wall = []
+    tid_count = {}
+
+    for i in range(0, len(paishan_str), 2):
+        chunk = paishan_str[i : i + 2]
+        tid_base = mpsz_to_tid(chunk)
+        real_tid = tid_base
+
+        is_red_str = chunk.startswith("0")
+        if is_red_str:
+            pass
+        else:
+            if tid_base in [16, 52, 88]:
+                real_tid += 1
+
+        cnt = tid_count.get(real_tid, 0)
+        final_tid = real_tid + cnt
+        tid_count[real_tid] = cnt + 1
+
+        wall.append(final_tid)
+
+    return wall

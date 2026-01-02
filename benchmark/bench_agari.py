@@ -98,7 +98,19 @@ def main() -> None:
                 assert res_r.agari, f"Agari: {res_r.agari}"
                 if expected_yakuman:
                     pass
-                else:
+                if not expected_yakuman:
+                    if res_r.han != expected_han:
+                        print(f"Mismatch in {log_path} (Riichienv):")
+                        print(f"  Hand: {ctx.tiles}")
+                        print(f"  Melds: {ctx.melds}")
+                        print(f"  Win tile: {ctx.agari_tile}")
+                        # print(f"  Conditions: {ctx.conditions}")
+                        # print(f"  Calc Yaku: {res_r.yaku_names}")
+                        print(f"  Calc Yaku IDs: {res_r.yaku}")
+                        print(f"  Calc Han: {res_r.han} (Expected {expected_han})")
+                        print(f"  Calc Fu: {res_r.fu} (Expected {expected_fu})")
+                        print(f"  Expected Yaku IDs: {ctx.expected_yaku}")
+                    
                     assert res_r.han == expected_han, f"Han: {res_r.han} != {expected_han}"
                     assert res_r.fu == expected_fu, f"Fu: {res_r.fu} != {expected_fu}"
 

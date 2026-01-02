@@ -48,7 +48,11 @@ pub enum Action {
         hules: Vec<HuleData>,
     },
     NoTile,
-    LiuJu,
+    LiuJu {
+        lj_type: u8,
+        seat: usize,
+        tiles: Vec<u8>,
+    },
     Other(String),
 }
 
@@ -87,6 +91,7 @@ pub enum RawAction {
         liqibang: u8,
         left_tile_count: Option<u8>,
         ura_doras: Option<Vec<String>>,
+        paishan: Option<String>,
     },
     #[serde(rename = "DiscardTile")]
     DiscardTile {
@@ -130,7 +135,14 @@ pub enum RawAction {
     #[serde(rename = "NoTile")]
     NoTile {},
     #[serde(rename = "LiuJu")]
-    LiuJu {},
+    LiuJu {
+        #[serde(rename = "type", default)]
+        lj_type: u8,
+        #[serde(default)]
+        seat: usize,
+        #[serde(default)]
+        tiles: Vec<String>,
+    },
     #[serde(other)]
     Other,
 }
@@ -340,6 +352,7 @@ pub struct Kyoku {
     ben: u8,
     liqibang: u8,
     left_tile_count: u8,
+    paishan: Option<String>,
     pub actions: Arc<[Action]>,
 }
 
@@ -393,6 +406,10 @@ impl Kyoku {
             )?;
 
             nr_data.set_item("ura_doras", ud_list)?;
+        }
+
+        if let Some(paishan_str) = &self.paishan {
+            nr_data.set_item("paishan", paishan_str)?;
         }
 
         nr_event.set_item("data", nr_data)?;
@@ -524,8 +541,17 @@ impl Kyoku {
                 Action::NoTile => {
                     a_event.set_item("name", "NoTile")?;
                 }
-                Action::LiuJu => {
+                Action::LiuJu {
+                    lj_type,
+                    seat,
+                    tiles,
+                } => {
                     a_event.set_item("name", "LiuJu")?;
+                    a_data.set_item("type", lj_type)?;
+                    a_data.set_item("seat", seat)?;
+                    let t_strs: Vec<String> =
+                        tiles.iter().map(|t| TileConverter::to_string(*t)).collect();
+                    a_data.set_item("tiles", t_strs)?;
                 }
                 Action::Other(_) => {
                     continue;
@@ -550,6 +576,7 @@ impl Kyoku {
         let mut liqibang = 0;
         let mut left_tile_count = 70;
         let mut ura_doras = Vec::new();
+        let mut paishan = None;
 
         if let RawAction::NewRound {
             scores: s,
@@ -567,6 +594,7 @@ impl Kyoku {
             liqibang: l,
             left_tile_count: lc,
             ura_doras: ud,
+            paishan: p,
         } = &raw_actions[0]
         {
             scores = s.clone();
@@ -606,6 +634,7 @@ impl Kyoku {
                     .map(|v| TileConverter::parse_tile_136(v))
                     .collect();
             }
+            paishan = p.clone();
         }
 
         let mut actions = Vec::with_capacity(raw_actions.len());
@@ -623,6 +652,7 @@ impl Kyoku {
             ben,
             liqibang,
             left_tile_count,
+            paishan,
             actions: Arc::from(actions),
         }
     }
@@ -748,7 +778,18 @@ impl Kyoku {
                 dora_marker: TileConverter::parse_tile_136(&dora_marker),
             },
             RawAction::NoTile {} => Action::NoTile,
-            RawAction::LiuJu {} => Action::LiuJu,
+            RawAction::LiuJu {
+                lj_type,
+                seat,
+                tiles,
+            } => Action::LiuJu {
+                lj_type,
+                seat,
+                tiles: tiles
+                    .iter()
+                    .map(|v| TileConverter::parse_tile_136(v))
+                    .collect(),
+            },
             _ => Action::Other("Other".to_string()),
         }
     }
@@ -1008,11 +1049,11 @@ impl AgariContextIterator {
                                 && !self.rinshan[seat],
                             rinshan: self.rinshan[seat],
                             chankan: is_chankan,
-                            tsumo_first_turn: self.is_first_turn[seat],
-                            kyoutaku: self.kyoku.liqibang as u32,
-                            tsumi: self.kyoku.ben as u32,
-                            player_wind: ((seat as i32 - self.kyoku.ju as i32 + 4) % 4) as u8,
+                            tsumo_first_turn: self.is_first_turn[seat] && is_zimo,
+                            player_wind: ((seat + 4 - self.kyoku.ju as usize) % 4) as u8,
                             round_wind: self.kyoku.chang,
+                            kyoutaku: 0, // Not tracked in basic loop?
+                            tsumi: 0,    // Not tracked
                         };
 
                         if !is_zimo {

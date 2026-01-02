@@ -56,15 +56,15 @@ def test_yaku_scenarios():
             "hand": "234m234p234s66m88s",
             "win_tile": "6m",
             "min_han": 1,
-            "yaku_check": lambda y: 12 in y or 4 in y,  # MJSoul ID 4 or 12 (Observed)
+            "yaku_check": lambda y: 12 in y,  # Tanyao ID 12
         },
         {
             "name": "Pinfu",
             # 123m 456p 789s 23p 99m. Win 1p or 4p.
             "hand": "123m456p789s23p99m",
-            "min_han": 1,
             "win_tile": "1p",
-            "yaku_check": lambda y: 14 in y or 3 in y,  # MJSoul ID 3 or 14
+            "min_han": 1,
+            "yaku_check": lambda y: 14 in y,  # Pinfu ID 14
         },
         {
             "name": "Yakuhai White",
@@ -72,7 +72,7 @@ def test_yaku_scenarios():
             "hand": "123m456p78s88m(p5z0)",
             "win_tile": "9s",
             "min_han": 1,
-            "yaku_check": lambda y: 7 in y or 12 in y or 18 in y,  # 7 is Observed
+            "yaku_check": lambda y: 7 in y,  # Yakuhai White (7)
         },
         {
             "name": "Honitsu",
@@ -80,21 +80,21 @@ def test_yaku_scenarios():
             "hand": "123m567m111m33z22z",
             "win_tile": "2z",
             "min_han": 3,
-            "yaku_check": lambda y: 27 in y or 29 in y or 30 in y or 34 in y,  # Honitsu ID (27 observed)
+            "yaku_check": lambda y: 27 in y,  # Honitsu ID 27
         },
         {
             "name": "Red Dora Pinfu",
             "hand": "234m067p678s34m22z",
             "win_tile": "5m",
             "min_han": 2,
-            "yaku_check": lambda y: 14 in y or 3 in y,
+            "yaku_check": lambda y: 14 in y,  # Pinfu ID 14
         },
         {
             "name": "Regression Honroutou False Positive",
             "hand": "11s22z(p5z0)(456s0)(789m0)",
             "win_tile": "1s",
             "min_han": 1,
-            "yaku_check": lambda y: (18 in y or 7 in y) and (24 not in y) and (31 not in y),
+            "yaku_check": lambda y: (7 in y) and (24 not in y) and (31 not in y),
         },
     ]
 
@@ -173,3 +173,24 @@ def test_multiple_aka_dora():
     # Aka Dora ID (32) should be in yaku, but not duplicated (ID list is unique now)
     assert res.yaku.count(32) == 1
     assert res.han == 3  # 3 aka doras
+
+
+def test_kyoku4_regression():
+    from riichienv import AgariCalculator, Conditions
+    # 4p, 6p, 4m, 4p, 7m, 3m, 0m(5m), 1m, 7m, 5p, 7m, 0p(5p), 3p, 1m
+    # Manzu: 1m(2), 3m(1), 4m(1), 5m(1), 7m(3)
+    # Pinzu: 3p(1), 4p(2), 5p(2), 6p(1)
+
+    standing = [48, 56, 12, 49, 24, 8, 16, 0, 25, 53, 26, 52, 44]
+    win_tile = 0  # 1m
+
+    # Case 1: All 14 tiles passed to constructor
+    temp_tiles = sorted(standing + [win_tile])
+    calc2 = AgariCalculator(temp_tiles, [])
+    res = calc2.calc(
+        win_tile, dora_indicators=[], ura_indicators=[], conditions=Conditions(tsumo=True, tsumo_first_turn=True)
+    )
+
+    print(f"DEBUG: Res agari={res.agari}, yaku={res.yaku}")
+    assert res.agari
+    assert 35 in res.yaku  # Tenhou

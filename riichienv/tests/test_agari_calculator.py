@@ -1,6 +1,45 @@
 import riichienv as rv
 
 
+def test_pinfu():
+    # Hand from debug log:
+    # DEBUG: Hand: [12, 17, 21, 68, 68, 80, 80, 83, 96, 104, 120, 120, 122]
+    # DEBUG: Win Tile: 100 (8s)
+
+    # 12: 4m
+    # 17: 5m
+    # 21: 6m
+    # 68: 9p
+    # 68: 9p (Duplicate!)
+    # 80: 3s
+    # 80: 3s (Duplicate!)
+    # 83: 3s
+    # 96: 7s
+    # 104: 9s
+    # 120: N
+    # 120: N
+    # 122: N
+
+    hand = [12, 17, 21, 68, 68, 80, 80, 83, 96, 104, 120, 120, 122]
+    win_tile = 100
+    melds = []  # No melds
+
+    # Conditions
+    # Riichi = True
+    cond = rv.Conditions(
+        tsumo=False,
+        riichi=True,
+        player_wind=3,  # Doesn't strict matter for Pinfu unless Jikaze head
+        round_wind=0,
+    )
+    res = rv.AgariCalculator(hand, melds).calc(
+        win_tile=win_tile, dora_indicators=[], conditions=cond, ura_indicators=[]
+    )
+
+    # Check Pinfu (ID 14)
+    assert 14 not in res.yaku
+
+
 def test_agari_calc_from_text():
     hand = rv.AgariCalculator.hand_from_text("123m456p789s111z2z")
     win_tile = rv.parse_tile("2z")

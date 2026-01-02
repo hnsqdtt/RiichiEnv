@@ -13,6 +13,7 @@ class ActionType(IntEnum):
     PASS = 7  # Pass on claim
     ANKAN = 8  # Closed Kan
     KAKAN = 9  # Add Kan (Chankan)
+    KYUSHU_KYUHAI = 10  # Nine Terminal Abortive Draw
 
 
 @dataclass
