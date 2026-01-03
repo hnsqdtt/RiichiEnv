@@ -194,11 +194,11 @@ class MjsoulEnvVerifier:
                 wall=paishan_wall,
                 scores=scores
             )
-            self.mjai_idx = 0
+            self.mjai_idx = len(self.env.mjai_log)
         else:
             self.env.reset(oya=oya, wall=paishan_wall, bakaze=bakaze_idx, scores=scores, honba=honba, kyotaku=kyotaku)
             self.match_started = True
-            self.mjai_idx = 0
+            self.mjai_idx = len(self.env.mjai_log)
 
         self.dora_indicators = self.env.dora_indicators[:]
 

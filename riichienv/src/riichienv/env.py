@@ -256,7 +256,6 @@ class RiichiEnv:
         self.current_claims = {}
         self.pending_kan = None
         self.last_discard = None
-        self.mjai_log = []
 
         # self.mjai_log should be handled by the caller or specialized method
 

@@ -85,6 +85,43 @@ while not env.done():
 scores, points = env.scores(), env.points()
 ```
 
+Mortal の mjai Bot とイベント処理フローの互換性を持ちます。
+
+```python
+import json
+
+from riichienv import RiichiEnv
+from riichienv.game_mode import GameType
+
+from model import load_model
+
+class MortalAgent:
+    def __init__(self, player_id: int):
+        self.player_id = player_id
+        # Load `libriichi.mjai.Bot` instance
+        self.model = load_model(player_id, "./mortal_v4.pth")
+
+    def act(self, obs) -> Action:
+        events = obs.new_events()
+        resp = None
+        for i, ev in enumerate(events):
+            resp = self.model.react(json.dumps(ev, separators=(",", ":")))
+
+        action = obs.select_action_from_mjai(resp)
+        assert action is not None, f"No response despite legal actions: {obs.legal_actions()}"
+        return action
+
+env = RiichiEnv(game_type=GameType.YON_HANCHAN, mjai_mode=True)
+agents = {pid: MortalAgent(pid) for pid in range(4)}
+obs_dict = env.reset()
+while not env.done():
+    actions = {pid: agents[pid].act(obs) for pid, obs in obs_dict.items()}
+    obs_dict = env.step(actions)
+
+print("FINISHED")
+
+```
+
 ## 🛠 Development
 
 - **Python**: 3.13+
