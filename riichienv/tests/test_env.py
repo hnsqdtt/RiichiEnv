@@ -1,3 +1,5 @@
+import json
+
 from riichienv import RiichiEnv
 from riichienv.action import Action, ActionType
 from riichienv.agents import RandomAgent
@@ -70,7 +72,7 @@ class TestRiichiEnv:
         initial_events = p0_obs.new_events()
         assert len(initial_events) == 3
         # Check masking
-        assert initial_events[2]["pai"] != "?"  # tsumo for self is visible
+        assert json.loads(initial_events[2])["pai"] != "?"  # tsumo for self is visible
 
         # NOTE: P1 is not actionable, so not in obs_dict.
         # We cannot check P1's new_events() from obs_dict directly unless we cheat.
@@ -87,7 +89,7 @@ class TestRiichiEnv:
         assert 0 not in obs_dict
 
         p1_obs = obs_dict[1]
-        p1_new = p1_obs.new_events()
+        p1_new = [json.loads(ev) for ev in p1_obs.new_events()]
         # P1 needs to catch up all events from start?
         # If this is the first time P1 received Observation, prev_events_size should be 0?
         # RiichiEnv tracks _player_event_counts.

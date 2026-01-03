@@ -30,6 +30,8 @@ pip install .
 
 様々なゲームルームに対応可能です。デフォルトは1局終了4人麻雀の試合を実行します。
 
+### One Round Game
+
 ```python
 from riichienv import RiichiEnv
 from riichienv.agents import RandomAgent
@@ -44,6 +46,8 @@ while not env.done():
 
 scores, points = env.scores(), env.points()
 ```
+
+### Customize One Round Game
 
 1局試合は場風や初期スコア、供託金、本場など、引数で設定可能です。
 
@@ -66,6 +70,8 @@ while not env.done():
 scores, points = env.scores(), env.points()
 ```
 
+### Hanchan Game
+
 半荘4人麻雀サドンデスあり飛びありのルールで試合を実行する場合は以下のように実行します。
 以下の場合では1局終了時ではなく、半荘試合が終了したタイミングで `env.done()` が `True` になります。
 
@@ -85,11 +91,11 @@ while not env.done():
 scores, points = env.scores(), env.points()
 ```
 
+### Compatibility with Mortal
+
 Mortal の mjai Bot とイベント処理フローの互換性を持ちます。
 
 ```python
-import json
-
 from riichienv import RiichiEnv
 from riichienv.game_mode import GameType
 
@@ -102,10 +108,9 @@ class MortalAgent:
         self.model = load_model(player_id, "./mortal_v4.pth")
 
     def act(self, obs) -> Action:
-        events = obs.new_events()
         resp = None
-        for i, ev in enumerate(events):
-            resp = self.model.react(json.dumps(ev, separators=(",", ":")))
+        for event in obs.new_events():
+            resp = self.model.react(event)
 
         action = obs.select_action_from_mjai(resp)
         assert action is not None, f"No response despite legal actions: {obs.legal_actions()}"
@@ -118,8 +123,8 @@ while not env.done():
     actions = {pid: agents[pid].act(obs) for pid, obs in obs_dict.items()}
     obs_dict = env.step(actions)
 
-print("FINISHED")
-
+scores, points, ranks = env.scores(), env.points(), env.ranks()
+print("FINISHED:", scores, points, ranks)
 ```
 
 ## 🛠 Development

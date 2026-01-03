@@ -36,11 +36,11 @@ class Observation:
             "legal_actions": [a.to_dict() for a in self._legal_actions],
         }
 
-    def new_events(self) -> list[dict[str, Any]]:
+    def new_events(self) -> list[str]:
         """
         Returns only the new events since the last observation.
         """
-        return self.events[self.prev_events_size :]
+        return [json.dumps(ev, separators=(",", ":")) for ev in self.events[self.prev_events_size :]]
 
     def select_action_from_mjai(self, mjai_action: str) -> Action | None:
         """
