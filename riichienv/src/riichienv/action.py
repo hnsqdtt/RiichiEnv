@@ -39,20 +39,24 @@ class Action:
         data = {}
         if self.type == ActionType.DISCARD:
             # "tsumogiri" flag is not known here, usually optional for action submission
+            assert self.tile is not None
             data = {"type": "dahai", "pai": tid_to_mjai(self.tile)}
         elif self.type == ActionType.CHI:
+            assert self.tile is not None
             data = {
                 "type": "chi",
                 "pai": tid_to_mjai(self.tile),
                 "consumed": [tid_to_mjai(t) for t in self.consume_tiles],
             }
         elif self.type == ActionType.PON:
+            assert self.tile is not None
             data = {
                 "type": "pon",
                 "pai": tid_to_mjai(self.tile),
                 "consumed": [tid_to_mjai(t) for t in self.consume_tiles],
             }
         elif self.type == ActionType.DAIMINKAN:
+            assert self.tile is not None
             data = {
                 "type": "daiminkan",
                 "pai": tid_to_mjai(self.tile),
@@ -66,6 +70,7 @@ class Action:
                 "consumed": [tid_to_mjai(t) for t in self.consume_tiles],
             }
         elif self.type == ActionType.KAKAN:
+            assert self.tile is not None
             data = {
                 "type": "kakan",
                 "pai": tid_to_mjai(self.tile),

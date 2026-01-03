@@ -69,7 +69,6 @@ def test_riichi_no_claim():
 def test_pon_available_without_riichi():
     env = RiichiEnv(seed=42)
     env.reset()
-    pid = 0
     # No Riichi
     env.hands[0] = [0, 1, 4, 5, 8] + [20] * 8
     env.hands[3] = [0] * 12 + [2]  # 1m

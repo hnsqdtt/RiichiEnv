@@ -37,7 +37,7 @@ def test_riichi_pass_action():
     assert env.drawn_tile is None or env.current_player != pid
     # Turn advanced (unless mid-game logic keeps it, but here it should advance)
     # Check mjai log for dahai tsumogiri
-    last_log = env.mjai_log[-2]  # -1 might be tsumo for next player
+    env.mjai_log[-2]  # -1 might be tsumo for next player
     # Actually wait, step appends dahai, then checks claims, then maybe tsumo for next.
     # Find the dahai event
     dahai_ev = next((e for e in reversed(env.mjai_log) if e["type"] == "dahai" and e["actor"] == pid), None)

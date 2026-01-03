@@ -1,18 +1,15 @@
 from . import convert
 from ._riichienv import (  # type: ignore
+    # RiichiEnv,  # Imported from .env below
+    Action,
+    ActionType,
     AgariContext,
     Kyoku,
     Meld,
     MeldType,
     Observation,
     Phase,
-    MeldType,
-    Observation,
-    Phase,
     ReplayGame,
-    # RiichiEnv,  # Imported from .env below
-    Action,
-    ActionType,
     Score,
     Wind,
     calculate_score,
@@ -20,8 +17,8 @@ from ._riichienv import (  # type: ignore
     parse_tile,
 )
 from .env import RiichiEnv
-from .hand import Agari, AgariCalculator, Conditions
 from .game_mode import GameType
+from .hand import Agari, AgariCalculator, Conditions
 
 EAST = Wind.East
 SOUTH = Wind.South
@@ -35,6 +32,7 @@ __all__ = [
     "Kyoku",
     "Meld",
     "MeldType",
+    "Observation",
     "ReplayGame",
     "Score",
     "Wind",

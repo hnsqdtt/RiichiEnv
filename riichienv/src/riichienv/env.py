@@ -66,7 +66,7 @@ class Observation:
                     return action
 
             if action.type == ActionType.KAKAN and target_json.get("type") == "kakan":
-                if target_json.get("pai") == _to_mjai_tile(action.tile):
+                if action.tile is not None and target_json.get("pai") == _to_mjai_tile(action.tile):
                     return action
 
             act_json = json.loads(action.to_mjai())
@@ -628,7 +628,7 @@ class RiichiEnv:
                     self.phase, self.active_players, self.pending_kan = (
                         Phase.WaitResponse,
                         ronners,
-                        action,  # Store action to resume later
+                        (self.current_player, action),  # Store action to resume later
                     )
                     self.last_discard = {"seat": self.current_player, "tile": action.tile}
                     self.current_claims = {pid: [Action(ActionType.RON, tile=action.tile)] for pid in ronners}
@@ -762,7 +762,7 @@ class RiichiEnv:
 
                 if self.pending_kan:
                     # Resuming from Chankan interruption (all passed)
-                    if self.pending_kan.type == ActionType.KAKAN:
+                    if self.pending_kan[1].type == ActionType.KAKAN:
                         self.is_rinshan_flag = True
                         self.ippatsu_eligible = [False] * 4
                         self.needs_tsumo = True
@@ -792,6 +792,8 @@ class RiichiEnv:
 
             # This part should only be reached if no actions matched above or loop skipped
             raise ValueError(f"Unhandled phase or action combination. Phase: {self.phase}, Actions: {actions}")
+
+        return self.get_observations([])
 
     def get_observations(self, player_ids: list[int]) -> dict[int, Observation]:
         obs_dict = {}
@@ -903,6 +905,7 @@ class RiichiEnv:
     def _execute_claim(self, pid: int, action: Action, from_pid: int | None = None):
         hand = self.hands[pid]
         if action.type == ActionType.KAKAN:
+            assert action.tile is not None
             hand.remove(action.tile)
         else:
             for t in action.consume_tiles:

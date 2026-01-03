@@ -6,7 +6,6 @@ from ._riichienv import (  # type: ignore
     Wind,
 )
 
-
 WINDS = [Wind.East, Wind.South, Wind.West, Wind.North]
 
 

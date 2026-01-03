@@ -1,6 +1,6 @@
+from riichienv import Wind
 from riichienv.env import RiichiEnv
 from riichienv.game_mode import GameType
-from riichienv import Wind
 
 
 def test_tonpuu_transitions():
@@ -20,7 +20,7 @@ def test_tonpuu_transitions():
 
     assert env.oya == 1
     assert env._custom_round_wind == int(Wind.East)  # Still East
-    assert env.done() == False
+    assert not env.done()
 
 
 def test_tonpuu_game_end():
@@ -36,7 +36,7 @@ def test_tonpuu_game_end():
     env._trigger_ryukyoku("exhaustive_draw")
 
     # Someone (Player 0) is > 30000 and top, so game should end
-    assert env.done() == True
+    assert env.done()
 
 
 def test_tonpuu_sudden_death():
@@ -50,7 +50,7 @@ def test_tonpuu_sudden_death():
     env._trigger_ryukyoku("exhaustive_draw")
 
     # No one reached 30000, should enter South 1
-    assert env.done() == False
+    assert not env.done()
     assert env.oya == 0
     assert env._custom_round_wind == int(Wind.South)  # South
 
@@ -66,7 +66,7 @@ def test_tonpuu_v_goal():
     # Simulate a win
     env._end_kyoku(is_renchan=False)  # Not renchan, normally would move to South 2
 
-    assert env.done() == True
+    assert env.done()
 
 
 def test_oya_agari_yame():
@@ -80,7 +80,7 @@ def test_oya_agari_yame():
     env._end_kyoku(is_renchan=True)
 
     # In last round, if oya is top and >= 30k, end game (Agari-yame)
-    assert env.done() == True
+    assert env.done()
 
 
 def test_hanchan_transitions():
@@ -94,7 +94,7 @@ def test_hanchan_transitions():
 
     assert env.oya == 0
     assert env._custom_round_wind == int(Wind.South)  # South entrance
-    assert env.done() == False
+    assert not env.done()
 
 
 def test_tobi():
@@ -107,7 +107,7 @@ def test_tobi():
 
     # Any round end should trigger game over
     env._end_kyoku(is_renchan=False)
-    assert env.done() == True
+    assert env.done()
 
 
 def test_one_kyoku_always_ends():
@@ -117,7 +117,7 @@ def test_one_kyoku_always_ends():
 
     # Even if Oya renchans
     env._end_kyoku(is_renchan=True)
-    assert env.done() == True
+    assert env.done()
 
 
 def test_kyotaku_carry_over():

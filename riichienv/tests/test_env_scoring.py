@@ -159,7 +159,8 @@ class TestRiichiScoring:
         # But `test_south_round_win` failure said: `AssertionError: assert 'E' == 'S'`.
         # That was logic error.
         # Wait, `test_env_scoring.py` failed with `TypeError` in `test_south_round_win`?
-        # `FAILED tests/test_env_scoring.py::TestRiichiScoring::test_south_round_win - AssertionError: assert 'E' == 'S'`
+        # FAILED tests/test_env_scoring.py::TestRiichiScoring::test_south_round_win
+        # - AssertionError: assert 'E' == 'S'
         # This means it ran fine but start kyoku event had wrong bakaze?
         # `assert start_kyoku["bakaze"] == "S"` failed.
         # This implies `RiichiEnv(..., round_wind=1)` worked?

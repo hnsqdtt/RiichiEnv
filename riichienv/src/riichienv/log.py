@@ -44,7 +44,9 @@ def get_logger(name: str | None = None) -> logging.Logger:
     stream_handler.setLevel(logging.INFO)
     formatters = {
         logging.DEBUG: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | {bcolors.CYAN}%(levelname)s{bcolors.ENDC} - {bcolors.CYAN}%(message)s{bcolors.ENDC}",
+            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | "
+            f"{bcolors.CYAN}%(levelname)s{bcolors.ENDC} - "
+            f"{bcolors.CYAN}%(message)s{bcolors.ENDC}",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.INFO: logging.Formatter(
@@ -52,11 +54,15 @@ def get_logger(name: str | None = None) -> logging.Logger:
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.WARNING: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | {bcolors.YELLOW}WARN{bcolors.ENDC} - {bcolors.YELLOW}%(message)s{bcolors.ENDC}",
+            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | "
+            f"{bcolors.YELLOW}WARN{bcolors.ENDC} - "
+            f"{bcolors.YELLOW}%(message)s{bcolors.ENDC}",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.ERROR: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | {bcolors.RED}%(levelname)s{bcolors.ENDC} -{bcolors.RED} %(message)s{bcolors.ENDC}",
+            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | "
+            f"{bcolors.RED}%(levelname)s{bcolors.ENDC} - "
+            f"{bcolors.RED}%(message)s{bcolors.ENDC}",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.CRITICAL: logging.Formatter(
