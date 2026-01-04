@@ -106,7 +106,7 @@ class TestRiichiEnv:
         assert obs.events[2]["pai"] == "?"
 
         # mjai log is recorded in env
-        assert len(env.mjai_log) == 5 # start_game, start_kyoku, tsumo, dahai, tsumo
+        assert len(env.mjai_log) == 5  # start_game, start_kyoku, tsumo, dahai, tsumo
         assert env.mjai_log[0]["type"] == "start_game"
         assert env.mjai_log[1]["type"] == "start_kyoku"
         assert env.mjai_log[2]["type"] == "tsumo"

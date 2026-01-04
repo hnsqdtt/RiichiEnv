@@ -6,7 +6,6 @@ from riichienv.agents import RandomAgent
 
 
 class TestRiichiEnv:
-
     def test_new_events_api(self):
         env = RiichiEnv(seed=42)
         obs_dict = env.reset()
