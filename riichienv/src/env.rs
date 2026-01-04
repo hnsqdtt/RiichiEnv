@@ -1939,6 +1939,9 @@ impl RiichiEnv {
                     .entry(pid)
                     .or_default()
                     .push(Action::new(ActionType::Ron, Some(tile), vec![]));
+            } else if waits.contains(&(tile / 4)) {
+                // Valid shape (Tenpai) but No Yaku (or unmet conditions) -> Temporary Furiten
+                self.missed_agari_doujun[pid as usize] = true;
             }
         }
 

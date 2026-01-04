@@ -141,6 +141,7 @@ class RiichiEnv:
         self.needs_tsumo: bool = False
         self._scores: list[int] = [25000, 25000, 25000, 25000]
         self.score_deltas: list[int] = [0, 0, 0, 0]
+        print("DEBUG: RiichiEnv INITIALIZED")
         self.riichi_sticks: int = 0
         self.riichi_declared: list[bool] = [False, False, False, False]
         self.riichi_stage: list[bool] = [False, False, False, False]
@@ -427,7 +428,7 @@ class RiichiEnv:
         self.last_discard = {"seat": self.current_player, "tile": discard_tile_id}
 
         self.current_claims = {}
-        ronners = self._get_ron_potential(discard_tile_id, is_chankan=False)
+        ronners = self._get_ron_potential(discard_tile_id, is_chankan=False, update_stat=True)
         for pid in ronners:
             self.current_claims.setdefault(pid, []).append(Action(ActionType.RON, tile=discard_tile_id))
 
@@ -475,7 +476,8 @@ class RiichiEnv:
         return self.get_observations(self.active_players)
 
     def step(self, actions: dict[int, Action]) -> dict[int, Observation]:
-        """Execute one step."""
+        self.is_new_round = False
+        self.is_new_turn = False
         if self.agari_results:
             self.last_agari_results = self.agari_results
         self.agari_results = {}
@@ -610,7 +612,9 @@ class RiichiEnv:
                     self.is_first_turn = False
 
                     # Check for Robbing Kan
-                    ronners = self._get_ron_potential(action.tile, is_chankan=is_chankan, is_ankan=(not is_chankan))
+                    ronners = self._get_ron_potential(
+                        action.tile, is_chankan=is_chankan, is_ankan=(not is_chankan), update_stat=True
+                    )
 
                     if not ronners:
                         # No Ron, proceed to Rinshan directly
@@ -1152,6 +1156,7 @@ class RiichiEnv:
                     double_riichi=self.double_riichi_declared[pid],
                     player_wind=WINDS[(pid - self.oya + 4) % 4],
                     round_wind=WINDS[self._custom_round_wind % 4],
+                    houtei=True,  # Force Agari check to ignore Yaku Shibari (detect all shape waits)
                 ),
             )
             if res.agari:
@@ -1177,7 +1182,9 @@ class RiichiEnv:
                 return True
         return False
 
-    def _get_ron_potential(self, tile: int, is_chankan: bool, is_ankan: bool = False) -> list[int]:
+    def _get_ron_potential(
+        self, tile: int, is_chankan: bool, is_ankan: bool = False, update_stat: bool = False
+    ) -> list[int]:
         res = []
         for p in range(4):
             if p == self.current_player:
@@ -1203,10 +1210,27 @@ class RiichiEnv:
                 if not calc.yakuman:
                     non_dora_yaku = [y for y in calc.yaku if y not in [31, 32, 33]]
                     if calc.han < 1 or not non_dora_yaku:
+                        if update_stat:
+                            if self.riichi_declared[p]:
+                                self.missed_agari_riichi[p] = True
+                            else:
+                                self.missed_agari_doujun[p] = True
                         continue
+
+                # Check strict Chankan rule (only Kokushi for Ankan)
                 if is_ankan and not (calc.han >= 13 and any(y in [42, 49] for y in calc.yaku)):
                     continue
+
                 res.append(p)
+            elif update_stat:
+                # Agari=False, but might be Valid Shape (No Yaku).
+                # _get_waits now returns all shape-waits (using houtei hack).
+                waits = self._get_waits(p)
+                if (tile // 4) in waits:
+                    if self.riichi_declared[p]:
+                        self.missed_agari_riichi[p] = True
+                    else:
+                        self.missed_agari_doujun[p] = True
         return res
 
     def _check_midway_draws(self) -> bool:
