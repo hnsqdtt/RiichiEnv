@@ -128,26 +128,11 @@ def test_multiple_aka_dora():
 
     # Valid 14-tile hand: 1+2+3m, 4+0+6p, 7+0+9s, 1+2+3s, 2z+2z
     # Red 5m:16, Red 5p:52, Red 5s:88
-    # 1m:0-3, 2m:4-7, 3m:8-11
-    # 4p:36-39, 6p:44-47
-    # 7s:72-75, 9s:80-83
-    # 1s:104-107, 2s:108-111, 3s:112-115
-    # 2z:116-119
-    # Valid 14-tile hand with 3 sequences: 123m, 406p, 709s, 123s, 1z1z
-    # Red 5m is only 1 Red.
-    # Let's use 023m, 056p, 089s, 123s, 1z1z.
-    # 123m: Red(16), 4, 8
-    # 456p: 48, Red(52), 56
-    # 789s: 72, 76, Red(88)
-    # 123s: 104, 108, 112
-    # 1z: 112, 113
-    # Valid 14-tile hand with 3 sequences: 345m, 456p, 345s, 111s, 1z1z (Red on each sequence)
+    # Valid 14-tile hand with 3 sequences: 345m, 456p, 345s, 666s, 8p8p (All Simples -> Tanyao)
     # Red 5m:16, Red 5p:52, Red 5s:88
-    # 3m:8, 4m:12, 5m(Red):16
-    # 4p:48, 5p(Red):52, 6p:56
-    # 3s:80, 4s:84, 5s(Red):88
-    # 1s:104, 105, 106 (Triplet)
-    # 1z:112 (Head)
+    # 6s: 92,93,94
+    # 8p: 64,65
+
     tiles_136 = [
         8,
         12,
@@ -158,21 +143,64 @@ def test_multiple_aka_dora():
         80,
         84,
         88,  # 345s (with Red 5s)
-        104,
-        105,
-        106,  # 111s (triplet)
-        112,  # 1z standing
+        92,
+        93,
+        94,  # 6s triplet (Simple)
+        64,  # 8p standing (Simple)
     ]
     tiles_136.sort()
+
     calc = AgariCalculator(tiles_136)
-    res = calc.calc(113, [], Conditions(), [])  # Win on 1z(113)
+    res = calc.calc(65, [], Conditions(), [])  # Win on 8p(65) -> Tanyao
 
     assert res.agari
     assert not res.yakuman
     assert 32 in res.yaku
+    assert 12 in res.yaku
     # Aka Dora ID (32) should be in yaku, but not duplicated (ID list is unique now)
     assert res.yaku.count(32) == 1
-    assert res.han == 3  # 3 aka doras
+    assert res.han == 4  # 3 aka doras + 1 Tanyao
+
+
+def test_only_aka_dora_fails():
+    from riichienv import AgariCalculator, Conditions
+
+    # Hand (No Yaku except Aka Dora):
+    # 345m (Red 5m), 456p (Red 5p), 345s (Red 5s)
+    # 9 s Triplet (Terminal)
+    # 1 z Pair (East) - Assuming West round/South player -> No Yakuhai
+
+    tiles_136 = [
+        8,
+        12,
+        16,  # 345m (Red 5m)
+        48,
+        52,
+        56,  # 456p (Red 5p)
+        80,
+        84,
+        88,  # 345s (Red 5s)
+        104,
+        105,
+        106,  # 9s Triplet (Terminal, breaks Tanyao)
+        108,  # 1z Pair (East)
+    ]
+    tiles_136.sort()
+
+    calc = AgariCalculator(tiles_136)
+
+    # Conditions: Non-East player (South), Non-East Round (South) -> 1z is NOT Yakuhai
+    cond = Conditions(player_wind=riichienv.Wind.South, round_wind=riichienv.Wind.South)
+
+    # Win on 1z (109 West? No, 108 is East. 112 is South? No. 108,109,110,111 = East.)
+    # 108 is Pair head. Win on 109 (East).
+    res = calc.calc(109, [], cond, [])
+
+    # Should have 3 Han (Aka Doras) but NO Yaku -> Agari=False
+    # Note: If is_agari=False or Yaku Shibari fails, result must be agari=False.
+    # We verify detection of 'Not Agari' primarily.
+    assert not res.agari, "Should fail Yaku Shibari with only Aka Doras"
+    # assert res.han == 3 # Omitted as implementation might return 0 if !agari
 
 
 def test_kyoku4_regression():

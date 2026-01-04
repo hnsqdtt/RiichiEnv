@@ -156,8 +156,13 @@ impl AgariCalculator {
         let is_oya = conditions.player_wind == Wind::East;
         let score_res = score::calculate_score(yaku_res.han, yaku_res.fu, is_oya, conditions.tsumo);
 
+        let has_yaku = yaku_res
+            .yaku_ids
+            .iter()
+            .any(|&id| id != yaku::ID_DORA && id != yaku::ID_AKADORA && id != yaku::ID_URADORA);
+
         Agari {
-            agari: !yaku_res.yaku_ids.is_empty() || yaku_res.yakuman_count > 0,
+            agari: (has_yaku || yaku_res.yakuman_count > 0) && yaku_res.han >= 1, // Ensure at least 1 han even if just from Yaku (implicit)
             yakuman: yaku_res.yakuman_count > 0,
             ron_agari: score_res.pay_ron,
             tsumo_agari_oya: score_res.pay_tsumo_oya,

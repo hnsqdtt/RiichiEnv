@@ -97,3 +97,45 @@ def test_agari_calc_from_text():
     assert res.tsumo_agari_oya == 1300
     assert res.tsumo_agari_ko == 700
     assert res.ron_agari == 0
+
+
+def test_yaku_shibari():
+    # Hand: 1, 2, 3m, 5p, 6p, 7p, 2s, 2s, 6s, 7s, 8s
+    # Melds: Chi(5m, 6m, 7m) where 5m is Red (0m) or 5pr.
+    # Actually, previous reproduction used:
+    # Hand: 2m, 3m, 0p(5pr), 6p, 7p, 2s, 2s, 6s, 7s, 8s (10 tiles) + Chi(567m)
+    # Win: 1m
+
+    # Let's reconstruct cleanly:
+    # Hand: 123m (1m win), 567p (with red 5p), 22s, 678s.
+    # Melds: None (Closed) or Open? If Closed, Menzen Tsumo is Yaku.
+    # Must be Open to fail Yaku Shibari if no other Yaku.
+
+    # Hand: 2m, 3m, 5pr, 6p, 7p, 2s, 2s, 6s, 7s, 8s.
+    # Meld: Chi 5,6,7m (Open).
+    # Win: 1m (from Ron)
+
+    # 2m=4, 3m=8
+    # 5pr=52
+    # 6p=56, 7p=60
+    # 2s=76, 77 (pair)
+    # 6s=92, 7s=96, 8s=100
+
+    hand_tiles = [4, 8, 52, 56, 60, 76, 77, 92, 96, 100]
+
+    # Meld 567m Open
+    # 5m=16, 6m=20, 7m=24
+    m = rv.Meld(rv.MeldType.Chi, [16, 20, 24], True)
+
+    win_tile = 0  # 1m
+
+    calc = rv.AgariCalculator(hand_tiles, [m])
+
+    # Default conditions (Ron, no Riichi = No Yaku context except Dora)
+
+    res = calc.calc(win_tile, dora_indicators=[], conditions=rv.Conditions())
+
+    # Should not be agari (either shape invalid or Yaku Shibari)
+    # Ideally should be Yaku Shibari if shape is valid.
+    # But for now we just verify it doesn't allow a win.
+    assert not res.agari, "Yaku Shibari failed: Allowed agari with only Aka Dora"
