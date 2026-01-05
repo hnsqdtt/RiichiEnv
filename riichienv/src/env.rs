@@ -1941,8 +1941,11 @@ impl RiichiEnv {
                 self.ippatsu_cycle[pid as usize] = true; // Start Ippatsu cycle
 
                 // Check for Double Riichi
-                if self.is_first_turn && self.discards[pid as usize].len() == 1 && self.melds.iter().all(|m| m.is_empty()) {
-                     self.double_riichi_declared[pid as usize] = true;
+                if self.is_first_turn
+                    && self.discards[pid as usize].len() == 1
+                    && self.melds.iter().all(|m| m.is_empty())
+                {
+                    self.double_riichi_declared[pid as usize] = true;
                 }
 
                 let mut ev = serde_json::Map::new();
@@ -1969,7 +1972,10 @@ impl RiichiEnv {
             if pid == discarded_pid {
                 continue;
             }
-            if self.riichi_declared[pid as usize] || self.double_riichi_declared[pid as usize] || self.riichi_stage[pid as usize] {
+            if self.riichi_declared[pid as usize]
+                || self.double_riichi_declared[pid as usize]
+                || self.riichi_stage[pid as usize]
+            {
                 // Riichi logic: Can only Ron (checked later? No, usually cannot call unless Ron allowed. But Ron IS allowed in Riichi).
                 // Wait, Ron is allowed in Riichi.
                 // But this check skips?
@@ -2037,7 +2043,10 @@ impl RiichiEnv {
                 if pid == discarded_pid {
                     continue;
                 }
-                if self.riichi_declared[pid as usize] || self.double_riichi_declared[pid as usize] || self.riichi_stage[pid as usize] {
+                if self.riichi_declared[pid as usize]
+                    || self.double_riichi_declared[pid as usize]
+                    || self.riichi_stage[pid as usize]
+                {
                     continue;
                 }
 
@@ -2128,7 +2137,11 @@ impl RiichiEnv {
             // 3. Chi (Only next player)
             let next_pid = (discarded_pid + 1) % 4;
             // println!("DEBUG RUST: next_pid={} riichi_declared={}", next_pid, self.riichi_declared[next_pid as usize]);
-            if !self.riichi_declared[next_pid as usize] && !self.double_riichi_declared[next_pid as usize] && !self.riichi_stage[next_pid as usize] && tile < 108 {
+            if !self.riichi_declared[next_pid as usize]
+                && !self.double_riichi_declared[next_pid as usize]
+                && !self.riichi_stage[next_pid as usize]
+                && tile < 108
+            {
                 let hand = &self.hands[next_pid as usize];
                 let t_type = tile / 4;
                 let suit = t_type / 9;
@@ -2174,7 +2187,11 @@ impl RiichiEnv {
                     for &t1 in &distinct1 {
                         for &t2 in &distinct2 {
                             let consumed = vec![t1, t2];
-                            if self._is_kuikae_valid(&self.hands[next_pid as usize], tile, &consumed) {
+                            if self._is_kuikae_valid(
+                                &self.hands[next_pid as usize],
+                                tile,
+                                &consumed,
+                            ) {
                                 self.current_claims
                                     .entry(next_pid)
                                     .or_default()
@@ -2215,7 +2232,11 @@ impl RiichiEnv {
                     for &t1 in &distinct1 {
                         for &t2 in &distinct2 {
                             let consumed = vec![t1, t2];
-                            if self._is_kuikae_valid(&self.hands[next_pid as usize], tile, &consumed) {
+                            if self._is_kuikae_valid(
+                                &self.hands[next_pid as usize],
+                                tile,
+                                &consumed,
+                            ) {
                                 self.current_claims
                                     .entry(next_pid)
                                     .or_default()
@@ -2256,7 +2277,11 @@ impl RiichiEnv {
                     for &t1 in &distinct1 {
                         for &t2 in &distinct2 {
                             let consumed = vec![t1, t2];
-                            if self._is_kuikae_valid(&self.hands[next_pid as usize], tile, &consumed) {
+                            if self._is_kuikae_valid(
+                                &self.hands[next_pid as usize],
+                                tile,
+                                &consumed,
+                            ) {
                                 self.current_claims
                                     .entry(next_pid)
                                     .or_default()
@@ -2609,11 +2634,11 @@ impl RiichiEnv {
                 sim_hand.swap_remove(pos);
             }
         }
-        
+
         let called_kv = tile / 4;
         let mut forbidden_kvs = Vec::new();
         forbidden_kvs.push(called_kv); // Rule 1: Cannot discard same tile
-        
+
         // Rule 2: Suji-gui (Eating-Swap)
         // Check if called + consumed form a sequence
         let mut full_set_kvs = vec![called_kv];
@@ -2621,19 +2646,22 @@ impl RiichiEnv {
             full_set_kvs.push(c / 4);
         }
         full_set_kvs.sort();
-        
-        if full_set_kvs.len() == 3 && full_set_kvs[2] == full_set_kvs[1] + 1 && full_set_kvs[1] == full_set_kvs[0] + 1 {
+
+        if full_set_kvs.len() == 3
+            && full_set_kvs[2] == full_set_kvs[1] + 1
+            && full_set_kvs[1] == full_set_kvs[0] + 1
+        {
             let min = full_set_kvs[0];
             let max = full_set_kvs[2];
             let num_min = min % 9;
-            
+
             if called_kv == min && num_min <= 5 {
                 forbidden_kvs.push(max + 1);
             } else if called_kv == max && num_min >= 1 {
-                 forbidden_kvs.push(min - 1);
+                forbidden_kvs.push(min - 1);
             }
         }
-        
+
         // Check if any legal discard remains
         sim_hand.iter().any(|&t| !forbidden_kvs.contains(&(t / 4)))
     }

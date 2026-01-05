@@ -15,7 +15,6 @@ from ._riichienv import (  # type: ignore
     parse_tile,
 )
 from .action import Action, ActionType
-
 from .game_mode import GameType
 from .hand import Agari, AgariCalculator, Conditions
 
