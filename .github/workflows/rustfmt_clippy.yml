@@ -1,4 +1,4 @@
-name: Rust Lint and Format
+name: rustfmt and clippy
 
 on:
   push:

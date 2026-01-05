@@ -1,4 +1,4 @@
-name: Python Lint and Type Check
+name: ruff and ty
 
 on:
   push:

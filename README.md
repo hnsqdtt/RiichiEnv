@@ -2,11 +2,10 @@
 <img src="docs/assets/logo.jpg" width="35%">
 </div>
 
-[![Rust Lint and Format](https://github.com/smly/RiichiEnv/actions/workflows/rustfmt_clippy.yml/badge.svg?branch=main)](https://github.com/smly/RiichiEnv/actions/workflows/rustfmt_clippy.yml)
-
-[![Python Unit Tests](https://github.com/smly/RiichiEnv/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/smly/RiichiEnv/actions/workflows/pytest.yml)
-
-[![Python Lint and Type Check](https://github.com/smly/RiichiEnv/actions/workflows/ruff_ty.yml/badge.svg?branch=main)](https://github.com/smly/RiichiEnv/actions/workflows/ruff_ty.yml)
+[![rustfmt and clippy](https://github.com/smly/RiichiEnv/actions/workflows/rustfmt_clippy.yml/badge.svg?branch=main)](https://github.com/smly/RiichiEnv/actions/workflows/rustfmt_clippy.yml)
+[![pytest](https://github.com/smly/RiichiEnv/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/smly/RiichiEnv/actions/workflows/pytest.yml)
+[![ruff and ty](https://github.com/smly/RiichiEnv/actions/workflows/ruff_ty.yml/badge.svg?branch=main)](https://github.com/smly/RiichiEnv/actions/workflows/ruff_ty.yml)
+![License](https://img.shields.io/crates/l/daberu)
 
 # RiichiEnv
 
@@ -14,12 +13,21 @@
 
 注意：現在、まだ安定版のリリースに向けて開発中です。仕様が変更される可能性があります。
 
+- [ ] TODO: Colab badge
+- [ ] TODO: Kaggle Notebook badge
+- [ ] TODO: Build Status Badge
+
 ## ✨ Features
 
 * **High-performance**: Rust implementation for fast state transitions and rollouts
 * **Gym-like API**: Design for reinforcement learning
 * **Compatible with Mortal**: Easy to connect with Mortal Bot using mjai protocol
 * **Various Rules**: Support for various rules. No red dragons, three-player mahjong, etc.
+* **Game Replay**: Save and replay the game on Jupyter notebook
+
+## 📊 Performance
+
+- [ ] TODO: Add performance comparison with other packages (`mahjong`, `mjx`, `mahjax`, `mortal`)
 
 ## 📦 Installation
 
@@ -35,11 +43,12 @@ pip install riichienv
 
 ## 🚀 Usage
 
-- [*] TODO: Support four-player single round game
-- [*] TODO: Support four-player tonpuu game with red dragons
-- [*] TODO: Support four-player hanchan game with red dragons
+- [X] TODO: Support four-player single round game
+- [X] TODO: Support four-player tonpuu game with red dragons
+- [X] TODO: Support four-player hanchan game with red dragons
 - [ ] TODO: Support four-player hanchan game without red dragons
 - [ ] TODO: Support three-player game rules
+- [ ] TODO: Example codes for reinforcement learning
 
 ### Single Round Game
 
