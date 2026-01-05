@@ -7,13 +7,19 @@ export interface MjaiEvent {
     [key: string]: any;
 }
 
+export interface Tile {
+    tile: string;
+    isRiichi?: boolean;
+}
+
 export interface PlayerState {
     hand: string[];
-    discards: string[]; // List of tile strings
+    discards: Tile[]; // Changed from string[] to Tile[]
     melds: { type: string; tiles: string[]; from: number }[];
     score: number;
     riichi: boolean;
-    wind: number; // 0=East, 1=South, etc. (relative to Oya? No, absolute for seat)
+    pendingRiichi?: boolean; // Waiting for discard to mark as riichi
+    wind: number;
 }
 
 export interface BoardState {
@@ -24,4 +30,5 @@ export interface BoardState {
     kyotaku: number;
     wallRemaining: number;
     currentActor: number;
+    lastEvent?: MjaiEvent;
 }

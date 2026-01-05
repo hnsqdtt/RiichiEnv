@@ -61,13 +61,14 @@ export class GameState {
                 melds: [],
                 score: 25000,
                 riichi: false,
+                pendingRiichi: false,
                 wind: 0
             })),
             doraMarkers: [],
             round: 0,
             honba: 0,
             kyotaku: 0,
-            wallRemaining: 70, // Start estimate or parse start_kyoku
+            wallRemaining: 70,
             currentActor: 0
         };
     }
@@ -81,7 +82,6 @@ export class GameState {
         return true;
     }
 
-    // Very naive step back: reset and replay to cursor-1
     stepBackward(): boolean {
         if (this.cursor <= 0) return false;
         const target = this.cursor - 1;
@@ -101,6 +101,37 @@ export class GameState {
         }
         while (this.cursor < index) {
             this.stepForward();
+        }
+    }
+
+    // Jump to next/prev turn for a specific actor
+    stepTurn(forward: boolean, actor: number) {
+        // We scan events from cursor
+        let target = this.cursor;
+        const len = this.events.length;
+
+        if (forward) {
+            // scan forward until we find an event for this actor (tsumo or dahai?)
+            // Usually user wants to see their next draw/discard.
+            for (let i = this.cursor + 1; i < len; i++) {
+                const e = this.events[i];
+                if (e.actor === actor && (e.type === 'tsumo' || e.type === 'dahai' || e.type === 'pon' || e.type === 'chi' || e.type === 'kan')) {
+                    target = i;
+                    break;
+                }
+            }
+            this.jumpTo(target);
+        } else {
+            // scan backward
+            for (let i = this.cursor - 1; i >= 0; i--) {
+                const e = this.events[i];
+                // If we land exactly on start of turn usually tsumo?
+                if (e.actor === actor && (e.type === 'tsumo' || e.type === 'dahai' || e.type === 'pon' || e.type === 'chi' || e.type === 'kan')) {
+                    target = i;
+                    break;
+                }
+            }
+            this.jumpTo(target);
         }
     }
 
@@ -124,12 +155,12 @@ export class GameState {
                     p.discards = [];
                     p.melds = [];
                     p.riichi = false;
+                    p.pendingRiichi = false;
                     p.score = e.scores[i];
                 });
                 break;
 
             case 'tsumo':
-                // actor draws pai
                 if (e.actor !== undefined && e.pai) {
                     this.current.players[e.actor].hand.push(e.pai);
                     this.current.currentActor = e.actor;
@@ -139,17 +170,20 @@ export class GameState {
             case 'dahai':
                 if (e.actor !== undefined && e.pai) {
                     const p = this.current.players[e.actor];
-                    // Remove from hand. 
-                    // Note: MJAI 'pai' matches the tile string exactly usually.
                     const idx = p.hand.indexOf(e.pai);
                     if (idx >= 0) {
                         p.hand.splice(idx, 1);
-                    } else {
-                        // Tsumogiri (sometimes implied if not found?)
-                        // Or maybe we missed the tsumo event?
                     }
                     p.hand = sortHand(p.hand);
-                    p.discards.push(e.pai);
+
+                    // Riichi Logic
+                    let isRiichi = false;
+                    if (p.pendingRiichi) {
+                        isRiichi = true;
+                        p.pendingRiichi = false; // Consumed (unless stolen later)
+                    }
+
+                    p.discards.push({ tile: e.pai, isRiichi });
                     this.current.currentActor = e.actor;
                 }
                 break;
@@ -159,27 +193,28 @@ export class GameState {
             case 'daiminkan':
                 if (e.actor !== undefined && e.target !== undefined && e.pai && e.consumed) {
                     const p = this.current.players[e.actor];
-                    // Remove consumed tiles from hand
                     e.consumed.forEach(t => {
                         const idx = p.hand.indexOf(t);
                         if (idx >= 0) p.hand.splice(idx, 1);
                     });
 
                     // Add meld
-                    // e.pai is the stolen tile
-                    // We need to visually represent who it came from (relative index)
                     p.melds.push({
                         type: e.type,
-                        tiles: [...e.consumed, e.pai], // Naive
+                        tiles: [...e.consumed, e.pai],
                         from: e.target
                     });
 
                     this.current.currentActor = e.actor;
 
-                    // Remove the stolen tile from target's discard (it was just discarded)
+                    // Remove from target discard
                     const targetP = this.current.players[e.target];
                     if (targetP.discards.length > 0) {
-                        targetP.discards.pop();
+                        const stolen = targetP.discards.pop();
+                        // If stolen tile was Riichi declared, player must re-declare on next discard
+                        if (stolen && stolen.isRiichi) {
+                            targetP.pendingRiichi = true;
+                        }
                     }
                 }
                 break;
@@ -201,14 +236,10 @@ export class GameState {
                 break;
 
             case 'reach':
-                // Step 1: Declare (prior to discard)
-                // Step 2: Success (step attribute usually, or inferred)
                 if (e.actor !== undefined) {
-                    // We'll mark them as riichi pending or just riichi
-                    // Usually MJAI has 'reach' output BEFORE the discard. 
-                    // Real Riichi is established after discard passes. 
-                    // For viz, we can show logic immediately.
-                    // However, simple boolean toggle for now:
+                    if (e.step === '1') {
+                        this.current.players[e.actor].pendingRiichi = true;
+                    }
                     if (e.step === '2') {
                         this.current.players[e.actor].riichi = true;
                         this.current.kyotaku += 1;
@@ -225,12 +256,11 @@ export class GameState {
 
             case 'hora':
             case 'ryukyoku':
-                // End of round logic if needed
                 if (e.scores) {
-                    // Update scores
                     this.current.players.forEach((p, i) => p.score = e.scores[i]);
                 }
                 break;
         }
+        this.current.lastEvent = e;
     }
 }

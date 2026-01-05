@@ -9,6 +9,10 @@ export class Viewer {
     controlPanel: HTMLElement;
     log: MjaiEvent[];
 
+    kyokuSelect!: HTMLSelectElement;
+    viewpointSelect!: HTMLSelectElement;
+    // slider!: HTMLInputElement; // Removed
+
     constructor(containerId: string, log: MjaiEvent[]) {
         const el = document.getElementById(containerId);
         if (!el) throw new Error(`Container #${containerId} not found`);
@@ -48,97 +52,147 @@ export class Viewer {
     }
 
     initControls() {
-        // Kyoku Select
-        const select = document.createElement('select');
-        select.style.padding = '5px';
-        select.style.marginRight = '10px';
+        this.controlPanel.innerHTML = '';
+        this.controlPanel.style.flexDirection = 'column';
+        this.controlPanel.style.alignItems = 'center';
 
-        const checkpoints = this.gameState.getKyokuCheckpoints();
-        // Option 0: Start
-        const startOpt = document.createElement('option');
-        startOpt.value = '0';
-        startOpt.text = 'Start';
-        select.appendChild(startOpt);
+        const rowStyle = "display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 8px; flex-wrap: wrap;";
+        const btnStyle = "padding: 6px 12px; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px; font-weight: bold; font-family: sans-serif;";
 
-        checkpoints.forEach((cp) => {
-            const opt = document.createElement('option');
-            opt.value = cp.index.toString();
-            // formatRound is public on Renderer? Yes.
-            opt.text = `${this.renderer.formatRound(cp.round)} - ${cp.honba} Honba`;
-            select.appendChild(opt);
-        });
-
-        select.addEventListener('change', () => {
-            const idx = parseInt(select.value);
-            this.gameState.jumpTo(idx);
-            this.update();
-        });
-        this.kyokuSelect = select;
-        this.controlPanel.appendChild(select);
-
-        const btnStyle = "padding: 5px 10px; cursor: pointer;";
-        const createBtn = (lbl: string, cb: () => void) => {
+        const createBtn = (lbl: string, cb: () => void, title?: string) => {
             const b = document.createElement('button');
             b.textContent = lbl;
             b.style.cssText = btnStyle;
             b.onclick = cb;
+            if (title) b.title = title;
             return b;
         };
 
-        const prev = createBtn('< Prev', () => {
+        // --- Row 1: Turn Navigation ---
+        const navRow = document.createElement('div');
+        navRow.style.cssText = rowStyle;
+
+        const prevTurn = createBtn('<< Turn', () => {
+            this.gameState.stepTurn(false, this.renderer.viewpoint);
+            this.update();
+        }, "Previous Turn (Viewpoint Player)");
+
+        const prevStep = createBtn('< Step', () => {
             if (this.gameState.stepBackward()) this.update();
         });
 
-        const next = createBtn('Next >', () => {
+        const nextStep = createBtn('Step >', () => {
             if (this.gameState.stepForward()) this.update();
         });
 
-        const reset = createBtn('<< Start', () => {
-            this.gameState.reset();
+        const nextTurn = createBtn('Turn >>', () => {
+            this.gameState.stepTurn(true, this.renderer.viewpoint);
+            this.update();
+        }, "Next Turn (Viewpoint Player)");
+
+        navRow.appendChild(prevTurn);
+        navRow.appendChild(prevStep);
+        navRow.appendChild(nextStep);
+        navRow.appendChild(nextTurn);
+
+        // --- Row 2: Kyoku & Viewpoint ---
+        const metaRow = document.createElement('div');
+        metaRow.style.cssText = rowStyle;
+
+        // Kyoku Select
+        const kyokuSel = document.createElement('select');
+        kyokuSel.style.padding = '5px';
+        kyokuSel.style.borderRadius = '4px';
+        const checkpoints = this.gameState.getKyokuCheckpoints();
+
+        const startOpt = document.createElement('option');
+        startOpt.value = '0';
+        startOpt.text = 'Start Game';
+        kyokuSel.appendChild(startOpt);
+
+        checkpoints.forEach((cp) => {
+            const opt = document.createElement('option');
+            opt.value = cp.index.toString();
+            opt.text = `${this.renderer.formatRound(cp.round)} - ${cp.honba} Honba`;
+            kyokuSel.appendChild(opt);
+        });
+        kyokuSel.onchange = () => {
+            this.gameState.jumpTo(parseInt(kyokuSel.value));
+            this.update();
+        };
+        this.kyokuSelect = kyokuSel;
+
+        // Viewpoint Select
+        const viewSel = document.createElement('select');
+        viewSel.style.padding = '5px';
+        viewSel.style.borderRadius = '4px';
+        ['Self (P0)', 'Right (P1)', 'Opp (P2)', 'Left (P3)'].forEach((lbl, i) => {
+            const opt = document.createElement('option');
+            opt.value = i.toString();
+            opt.text = lbl;
+            viewSel.appendChild(opt);
+        });
+        viewSel.value = '0'; // Default P0
+        viewSel.onchange = () => {
+            this.renderer.viewpoint = parseInt(viewSel.value);
+            this.update();
+        };
+        this.viewpointSelect = viewSel;
+
+        // Prev/Next Kyoku Buttons
+        const prevKyoku = createBtn('Prev Kyoku', () => {
+            let target = 0;
+            for (const cp of checkpoints) {
+                if (cp.index < this.gameState.cursor - 5) {
+                    target = cp.index;
+                } else {
+                    break;
+                }
+            }
+            this.gameState.jumpTo(target);
             this.update();
         });
 
-        // Slider
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = '0';
-        slider.max = String(this.log.length);
-        slider.value = '0';
-        slider.style.flexGrow = '1';
-        slider.oninput = (e) => {
-            const val = parseInt((e.target as HTMLInputElement).value);
-            this.gameState.jumpTo(val);
-            this.update();
-        };
-        this.slider = slider;
+        const nextKyoku = createBtn('Next Kyoku', () => {
+            const nextCp = checkpoints.find(cp => cp.index > this.gameState.cursor);
+            if (nextCp) {
+                this.gameState.jumpTo(nextCp.index);
+                this.update();
+            }
+        });
 
-        this.controlPanel.appendChild(reset);
-        this.controlPanel.appendChild(prev);
-        this.controlPanel.appendChild(slider);
-        this.controlPanel.appendChild(next);
+        metaRow.appendChild(prevKyoku);
+        metaRow.appendChild(kyokuSel);
+        metaRow.appendChild(nextKyoku);
+
+        const spacer = document.createElement('span');
+        spacer.style.margin = '0 10px';
+        spacer.style.borderLeft = '1px solid #999';
+        spacer.style.height = '20px';
+        metaRow.appendChild(spacer);
+
+        metaRow.appendChild(viewSel);
+
+        this.controlPanel.appendChild(navRow);
+        this.controlPanel.appendChild(metaRow);
     }
-
-    slider!: HTMLInputElement;
-    kyokuSelect!: HTMLSelectElement;
 
     update() {
         this.renderer.render(this.gameState.current);
-        this.slider.value = String(this.gameState.cursor);
 
         // Sync Kyoku Select
-        // Find the index in checkpoints that is closest <= cursor
         const checkpoints = this.gameState.getKyokuCheckpoints();
-        // Assuming checkpoints are sorted by index
-        let activeCpIndex = 0;
-        for (let i = 0; i < checkpoints.length; i++) {
-            if (checkpoints[i].index <= this.gameState.cursor) {
-                activeCpIndex = i;
+        // Find checkpoint <= cursor
+        let activeIndex = 0;
+        for (const cp of checkpoints) {
+            if (cp.index <= this.gameState.cursor) {
+                activeIndex = cp.index;
             } else {
                 break;
             }
         }
-        if (checkpoints.length > 0) {
-            this.kyokuSelect.value = checkpoints[activeCpIndex].index.toString();
+        if (this.kyokuSelect) {
+            this.kyokuSelect.value = activeIndex.toString();
         }
     }
 }
