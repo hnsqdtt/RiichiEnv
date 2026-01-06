@@ -1,4 +1,4 @@
-from riichienv import Action, ActionType, RiichiEnv
+from riichienv import Action, ActionType, Meld, MeldType, RiichiEnv
 
 
 def test_kyushu_kyuhai():
@@ -25,7 +25,7 @@ def test_kyushu_kyuhai():
     env.needs_tsumo = False
 
     obs = env.get_observations([0])[0]
-    legals = [a.type for a in obs.legal_actions()]
+    legals = [a.action_type for a in obs.legal_actions()]
 
     assert ActionType.KYUSHU_KYUHAI in legals
 
@@ -52,9 +52,6 @@ def test_kyushu_kyuhai_not_available_after_meld():
     env.hands = [terminal_tids + other_tids[:4], [], [], []]
     env.drawn_tile = other_tids[4]
 
-    # To make sure no_melds is false, we need to add a meld to the RUST state.
-    from riichienv import Meld, MeldType
-
     m = Meld(MeldType.Peng, [20, 21, 22], True)
     env.melds = [[], [m], [], []]
 
@@ -62,7 +59,7 @@ def test_kyushu_kyuhai_not_available_after_meld():
     env.needs_tsumo = False
 
     obs = env.get_observations([0])[0]
-    legals = [a.type for a in obs.legal_actions()]
+    legals = [a.action_type for a in obs.legal_actions()]
 
     # Should NOT be available because there's a meld
     assert ActionType.KYUSHU_KYUHAI not in legals

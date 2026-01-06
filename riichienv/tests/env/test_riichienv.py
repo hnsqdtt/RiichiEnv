@@ -230,7 +230,7 @@ class TestRiichiEnv:
         # P2 legal actions check
         obs = obs_dict[2]
         legals = obs.legal_actions()
-        pon_actions = [a for a in legals if a.type == ActionType.PON]
+        pon_actions = [a for a in legals if a.action_type == ActionType.PON]
         assert len(pon_actions) > 0
 
         # P2 performs PON
@@ -269,7 +269,7 @@ class TestRiichiEnv:
 
         # P2 legal actions check
         obs = obs_dict[2]
-        pon_actions = [a for a in obs.legal_actions() if a.type == ActionType.PON]
+        pon_actions = [a for a in obs.legal_actions() if a.action_type == ActionType.PON]
         assert len(pon_actions) > 0
 
         # P2 performs PON
@@ -321,7 +321,7 @@ class TestRiichiEnv:
         # P1 Checks Legal
         obs = env.get_observations([1])[1]
         legals = obs.legal_actions()
-        chi_actions = [a for a in legals if a.type == ActionType.CHI]
+        chi_actions = [a for a in legals if a.action_type == ActionType.CHI]
         assert len(chi_actions) > 0
 
         # P1 performs CHI
@@ -335,7 +335,7 @@ class TestRiichiEnv:
         last_ev = env.mjai_log[-1]
         assert last_ev["type"] == "chi"
 
-    def test_chi_claim_with_red_dora(self) -> None:
+    def test_chi_claim_with_red_dora(self) -> None:  # noqa: PLR0915
         # P1 に 5m, 5mr が手にある状態でチーをするとき、どちらの牌を使ってチーするか選択できることを確認する
         env = RiichiEnv(seed=42)
         env.reset()
@@ -344,11 +344,7 @@ class TestRiichiEnv:
         # P1 (Right/Next/Shimocha) has 4m, 5m, 5mr.
         # (3m, 4m, 5m) and (3m, 4m, 5mr) sequence.
 
-        tile_3m = 8
-        tile_4m = 12
-        tile_5mr = 16
-        tile_5m = 17
-
+        tile_3m, tile_4m, tile_5mr, tile_5m = 8, 12, 16, 17
         h = env.hands
         h[0] = [tile_3m] + list(range(40, 40 + 12))
         h[1] = [tile_4m, tile_5mr, tile_5m] + list(range(60, 60 + 11))
@@ -357,7 +353,6 @@ class TestRiichiEnv:
 
         env.active_players = [0]
         env.current_player = 0
-
         env.drawn_tile = 100  # irrelevant
 
         # P0 Discards 3m
@@ -371,7 +366,7 @@ class TestRiichiEnv:
         # P1 Checks Legal
         obs = obs_dict[1]
         legals = obs.legal_actions()
-        chi_actions = [a for a in legals if a.type == ActionType.CHI]
+        chi_actions = [a for a in legals if a.action_type == ActionType.CHI]
         assert len(chi_actions) == 2
 
         # P1 performs CHI
@@ -395,11 +390,6 @@ class TestRiichiEnv:
         # P1 (Right/Next/Shimocha) has 4m, 5m, 5mr.
         # (3m, 4m, 5m) and (3m, 4m, 5mr) sequence.
 
-        tile_3m = 8
-        tile_4m = 12
-        tile_5mr = 16
-        tile_5m = 17
-
         h = env.hands
         h[0] = [tile_3m] + list(range(40, 40 + 12))
         h[1] = [tile_4m, tile_5mr, tile_5m] + list(range(60, 60 + 11))
@@ -422,7 +412,7 @@ class TestRiichiEnv:
         # P1 Checks Legal
         obs = obs_dict[1]
         legals = obs.legal_actions()
-        chi_actions = [a for a in legals if a.type == ActionType.CHI]
+        chi_actions = [a for a in legals if a.action_type == ActionType.CHI]
         assert len(chi_actions) == 2
 
         # P1 performs CHI
@@ -475,7 +465,7 @@ class TestRiichiEnv:
         # P1 Checks Legal
         obs = obs_dict[1]
         legals = obs.legal_actions()
-        chi_actions = [a for a in legals if a.type == ActionType.CHI]
+        chi_actions = [a for a in legals if a.action_type == ActionType.CHI]
         assert len(chi_actions) == 2
 
         # P1 performs CHI with a tile NOT in hand
@@ -517,7 +507,7 @@ class TestRiichiEnv:
         # P1 Checks Legal
         obs = obs_dict[1]
         legals = obs.legal_actions()
-        chi_actions = [a for a in legals if a.type == ActionType.CHI]
+        chi_actions = [a for a in legals if a.action_type == ActionType.CHI]
 
         # Expect 5 CHI patterns:
         # [4, 8] (23m)
@@ -567,7 +557,7 @@ class TestRiichiEnv:
 
         # P1 Legal Ron
         obs = obs_dict[1]
-        ron = [a for a in obs.legal_actions() if a.type == ActionType.Ron]
+        ron = [a for a in obs.legal_actions() if a.action_type == ActionType.Ron]
         assert len(ron) == 1
 
         # Execute Ron
@@ -611,7 +601,7 @@ class TestRiichiEnv:
 
         # In this scenario, 1s,1s,1s,1s were part of a 1s,2s,3s sequence wait.
         # Ankan would change the waits, so it should be ILLEGAL.
-        ankan = [a for a in legals if a.type == ActionType.Ankan]
+        ankan = [a for a in legals if a.action_type == ActionType.Ankan]
         assert len(ankan) == 0, f"Ankan should be illegal as it changes waits. Legals: {legals}"
 
     def test_riichi_declared_on_claim(self) -> None:
@@ -635,7 +625,9 @@ class TestRiichiEnv:
 
         # P0 PONS the reach tile
         assert env.phase == Phase.WaitResponse
-        assert 108 in [a.tile for a in env.get_observations(players=[0])[0].legal_actions() if a.type == ActionType.Pon]
+        assert 108 in [
+            a.tile for a in env.get_observations(players=[0])[0].legal_actions() if a.action_type == ActionType.Pon
+        ]
 
         # Before claim
         assert not env.riichi_declared[3]

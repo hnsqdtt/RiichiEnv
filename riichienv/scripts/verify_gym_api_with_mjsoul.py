@@ -779,7 +779,7 @@ class MjsoulEnvVerifier:
 
         elif data["type"] == 2:
             # DAIMINKAN (Open Kan)
-            kan_actions = [a for a in obs.legal_actions() if a.type == ActionType.Daiminkan]
+            kan_actions = [a for a in obs.legal_actions() if a.action_type == ActionType.Daiminkan]
             assert kan_actions, "ActionType.Daiminkan not found"
 
             target_action = None

@@ -363,23 +363,22 @@ impl Kyoku {
         Ok(AgariContextIterator::new(self.clone()))
     }
 
-    fn events(&self, py: Python) -> PyResult<PyObject> {
-        let events = PyList::empty_bound(py);
+    fn events(&self, py: Python) -> PyResult<Py<PyAny>> {
+        let events = PyList::empty(py);
 
         // Name: NewRound
-        let nr_event = PyDict::new_bound(py);
+        let nr_event = PyDict::new(py);
         nr_event.set_item("name", "NewRound")?;
-        let nr_data = PyDict::new_bound(py);
+        let nr_data = PyDict::new(py);
 
         nr_data.set_item("scores", self._scores.clone())?;
 
         if !self.doras.is_empty() {
-            let d_list =
-                PyList::new_bound(py, self.doras.iter().map(|t| TileConverter::to_string(*t)));
+            let d_list = PyList::new(py, self.doras.iter().map(|t| TileConverter::to_string(*t)))?;
 
             nr_data.set_item("doras", d_list)?;
         } else {
-            nr_data.set_item("doras", PyList::empty_bound(py))?;
+            nr_data.set_item("doras", PyList::empty(py))?;
         }
 
         if let Some(first) = self.doras.first() {
@@ -387,10 +386,10 @@ impl Kyoku {
         }
 
         for i in 0..4 {
-            let hand_list = PyList::new_bound(
+            let hand_list = PyList::new(
                 py,
                 self.hands[i].iter().map(|t| TileConverter::to_string(*t)),
-            );
+            )?;
 
             nr_data.set_item(format!("tiles{}", i), hand_list)?;
         }
@@ -402,10 +401,10 @@ impl Kyoku {
         nr_data.set_item("left_tile_count", self.left_tile_count)?;
 
         if !self.ura_doras.is_empty() {
-            let ud_list = PyList::new_bound(
+            let ud_list = PyList::new(
                 py,
                 self.ura_doras.iter().map(|t| TileConverter::to_string(*t)),
-            );
+            )?;
 
             nr_data.set_item("ura_doras", ud_list)?;
         }
@@ -419,8 +418,8 @@ impl Kyoku {
 
         // Actions
         for action in self.actions.iter() {
-            let a_event = PyDict::new_bound(py);
-            let a_data = PyDict::new_bound(py);
+            let a_event = PyDict::new(py);
+            let a_data = PyDict::new(py);
 
             match action {
                 Action::DiscardTile {
@@ -437,7 +436,7 @@ impl Kyoku {
                     a_data.set_item("is_wliqi", is_wliqi)?;
                     if let Some(d) = doras {
                         let d_list =
-                            PyList::new_bound(py, d.iter().map(|t| TileConverter::to_string(*t)));
+                            PyList::new(py, d.iter().map(|t| TileConverter::to_string(*t)))?;
 
                         a_data.set_item("doras", d_list)?;
                     }
@@ -453,7 +452,7 @@ impl Kyoku {
                     a_data.set_item("tile", TileConverter::to_string(*tile))?;
                     if let Some(d) = doras {
                         let d_list =
-                            PyList::new_bound(py, d.iter().map(|t| TileConverter::to_string(*t)));
+                            PyList::new(py, d.iter().map(|t| TileConverter::to_string(*t)))?;
                         a_data.set_item("doras", d_list)?;
                     }
                     if let Some(ltc) = left_tile_count {
@@ -477,7 +476,7 @@ impl Kyoku {
                     };
                     a_data.set_item("type", mt_int)?;
                     let t_list =
-                        PyList::new_bound(py, tiles.iter().map(|t| TileConverter::to_string(*t)));
+                        PyList::new(py, tiles.iter().map(|t| TileConverter::to_string(*t)))?;
 
                     a_data.set_item("tiles", t_list)?;
                     a_data.set_item("froms", froms.clone())?;
@@ -502,23 +501,23 @@ impl Kyoku {
                     }
                     if let Some(d) = doras {
                         let d_list =
-                            PyList::new_bound(py, d.iter().map(|t| TileConverter::to_string(*t)));
+                            PyList::new(py, d.iter().map(|t| TileConverter::to_string(*t)))?;
                         a_data.set_item("doras", d_list)?;
                     }
                 }
                 Action::Hule { hules } => {
                     a_event.set_item("name", "Hule")?;
-                    let h_list = PyList::empty_bound(py);
+                    let h_list = PyList::empty(py);
                     for h in hules {
-                        let h_dict = PyDict::new_bound(py);
+                        let h_dict = PyDict::new(py);
                         h_dict.set_item("seat", h.seat)?;
                         h_dict.set_item("hu_tile", TileConverter::to_string(h.hu_tile))?;
                         h_dict.set_item("zimo", h.zimo)?;
                         h_dict.set_item("count", h.count)?;
                         h_dict.set_item("fu", h.fu)?;
-                        let f_list = PyList::empty_bound(py);
+                        let f_list = PyList::empty(py);
                         for f_id in &h.fans {
-                            let f_dict = PyDict::new_bound(py);
+                            let f_dict = PyDict::new(py);
                             f_dict.set_item("id", f_id)?;
                             f_list.append(f_dict)?;
                         }
@@ -528,10 +527,8 @@ impl Kyoku {
                         h_dict.set_item("point_zimo_xian", h.point_zimo_xian)?;
                         h_dict.set_item("yiman", h.yiman)?;
                         if let Some(ld) = &h.li_doras {
-                            let ld_list = PyList::new_bound(
-                                py,
-                                ld.iter().map(|t| TileConverter::to_string(*t)),
-                            );
+                            let ld_list =
+                                PyList::new(py, ld.iter().map(|t| TileConverter::to_string(*t)))?;
                             h_dict.set_item("li_doras", ld_list)?;
                         }
                         h_list.append(h_dict)?;

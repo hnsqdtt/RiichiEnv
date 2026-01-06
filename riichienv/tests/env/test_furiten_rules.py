@@ -127,5 +127,5 @@ def test_ron_allowed_without_furiten():
     # P0 should now be able to Ron.
     assert 0 in obs_dict, "Player 0 should be active (No Furiten -> Ron allowed)"
     obs0 = obs_dict[0]
-    ron_moves = [a for a in obs0.legal_actions() if a.type == ActionType.Ron]
+    ron_moves = [a for a in obs0.legal_actions() if a.action_type == ActionType.Ron]
     assert len(ron_moves) > 0, "Ron should be allowed when not in Furiten"

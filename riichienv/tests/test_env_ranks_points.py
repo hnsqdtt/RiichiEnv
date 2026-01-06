@@ -1,6 +1,6 @@
 import pytest
 
-from riichienv.env import RiichiEnv
+from riichienv import RiichiEnv
 
 
 class TestRiichiEnvRanksPoints:

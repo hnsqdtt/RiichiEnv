@@ -79,7 +79,7 @@ class TestVerifierSmartScan:
 
         # 6. Verify Action
         assert captured_action is not None
-        assert captured_action.type == ActionType.DAIMINKAN
+        assert captured_action.action_type == ActionType.DAIMINKAN
         assert captured_action.tile == tid_1z_canonical  # Target 108 (implied from 1z)
 
         expected_consumed = [109, 110, 111]

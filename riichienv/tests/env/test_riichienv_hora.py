@@ -44,7 +44,7 @@ class TestRiichiEnv:
         assert 1 in env.active_players
         obs1 = obs_dict[1]
         legals = obs1.legal_actions()
-        ron = [a for a in legals if a.type == ActionType.Ron]
+        ron = [a for a in legals if a.action_type == ActionType.Ron]
         assert len(ron) == 1
 
         # Execute Ron
@@ -89,7 +89,7 @@ class TestRiichiEnv:
 
         assert pid in obs_dict, "P3 should receive an observation after discard."
         legals = obs_dict[pid].legal_actions()
-        has_ron = any(a.type == ActionType.Ron for a in legals)
+        has_ron = any(a.action_type == ActionType.Ron for a in legals)
         assert has_ron, "Ron should be legal because South (Bakaze) is a Yaku in a South round."
         obs_dict = env.step({pid: Action(ActionType.Ron, tile=discard_tile)})
         # 11: 役牌:場風牌 => 南

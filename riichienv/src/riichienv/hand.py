@@ -184,12 +184,13 @@ class AgariCalculator:
     def calc_from_text(
         hand_str_repr_with_win_tile: str,
         dora_indicators: str | None = None,
-        conditions: Conditions = Conditions(),
+        conditions: Conditions | None = None,
         ura_indicators: str | None = None,
     ) -> Agari:
         """
         hand_str_repr_with_win_tile: str は 14 枚分の牌を想定する。最後の1枚を win_tile として扱う。
         """
+        conditions = conditions or Conditions()
         tiles, melds = rust_core.parse_hand(hand_str_repr_with_win_tile)
         if not tiles and not melds:
             raise ValueError("Empty hand")
@@ -268,7 +269,7 @@ class AgariCalculator:
             res += "".join(map(str, honors)) + "z"
         return res
 
-    def _meld_to_string(self, meld: Meld) -> str:
+    def _meld_to_string(self, meld: Meld) -> str:  # noqa: PLR0915
         # Reconstruct string from Meld
         # (XYZCI)
         # Meld has tiles[].
@@ -349,9 +350,10 @@ class AgariCalculator:
         self,
         win_tile: int,
         dora_indicators: list[int] | None = None,
-        conditions: Conditions = Conditions(),
+        conditions: Conditions | None = None,
         ura_indicators: list[int] | None = None,
     ) -> Agari:
+        conditions = conditions or Conditions()
         if dora_indicators is None:
             dora_indicators = []
         if ura_indicators is None:

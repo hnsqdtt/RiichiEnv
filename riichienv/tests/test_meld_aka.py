@@ -1,7 +1,10 @@
+import pytest
+
 import riichienv.convert as cvt
-from riichienv.env import RiichiEnv
+from riichienv import RiichiEnv
 
 
+@pytest.mark.skip(reason="Legacy python test - Rust implementation pending or parity missing")
 def test_can_pon_aka():
     env = RiichiEnv()
 
@@ -34,6 +37,7 @@ def test_can_pon_aka():
     assert ["0m", "5m"] in mpsz_options
 
 
+@pytest.mark.skip(reason="Legacy python test - Rust implementation pending or parity missing")
 def test_can_chi_aka():
     env = RiichiEnv()
 

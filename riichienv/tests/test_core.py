@@ -1,9 +1,8 @@
 import riichienv
+from riichienv import AgariCalculator, Conditions, MeldType
 
 
 def test_hand_parsing():
-    from riichienv import AgariCalculator, MeldType
-
     # Test hand_from_text (13 tiles)
     text = "123m456p789s111z2z"  # 13 tiles
     hand = AgariCalculator.hand_from_text(text)
@@ -43,8 +42,6 @@ def test_hand_parsing():
 
 
 def test_yaku_scenarios():
-    from riichienv import AgariCalculator, Conditions
-
     def get_tile(s):
         tiles, _ = riichienv.parse_hand(s)
         tiles = list(tiles)
@@ -124,8 +121,6 @@ def test_yaku_scenarios():
 
 
 def test_multiple_aka_dora():
-    from riichienv import AgariCalculator, Conditions
-
     # Valid 14-tile hand: 1+2+3m, 4+0+6p, 7+0+9s, 1+2+3s, 2z+2z
     # Red 5m:16, Red 5p:52, Red 5s:88
     # Valid 14-tile hand with 3 sequences: 345m, 456p, 345s, 666s, 8p8p (All Simples -> Tanyao)
@@ -163,8 +158,6 @@ def test_multiple_aka_dora():
 
 
 def test_only_aka_dora_fails():
-    from riichienv import AgariCalculator, Conditions
-
     # Hand (No Yaku except Aka Dora):
     # 345m (Red 5m), 456p (Red 5p), 345s (Red 5s)
     # 9 s Triplet (Terminal)
@@ -204,7 +197,6 @@ def test_only_aka_dora_fails():
 
 
 def test_kyoku4_regression():
-    from riichienv import AgariCalculator, Conditions
     # 4p, 6p, 4m, 4p, 7m, 3m, 0m(5m), 1m, 7m, 5p, 7m, 0p(5p), 3p, 1m
     # Manzu: 1m(2), 3m(1), 4m(1), 5m(1), 7m(3)
     # Pinzu: 3p(1), 4p(2), 5p(2), 6p(1)

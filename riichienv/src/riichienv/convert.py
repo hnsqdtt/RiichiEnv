@@ -76,8 +76,8 @@ def mpsz_to_tid(mpsz_str: str) -> int:
 
     try:
         num = int(num_str)
-    except ValueError:
-        raise ValueError(f"Invalid number: {num_str}")
+    except ValueError as e:
+        raise ValueError(f"Invalid number: {num_str}") from e
 
     if suit == "z":
         if not (1 <= num <= 7):
@@ -280,9 +280,8 @@ def paishan_to_wall(paishan_str: str) -> list[int]:
         is_red_str = chunk.startswith("0")
         if is_red_str:
             pass
-        else:
-            if tid_base in [16, 52, 88]:
-                real_tid += 1
+        elif tid_base in [16, 52, 88]:
+            real_tid += 1
 
         cnt = tid_count.get(real_tid, 0)
         final_tid = real_tid + cnt

@@ -59,7 +59,7 @@ class TestChankan:
 
         # Player 1 should have RON action
         legal_actions = obs_dict[1].legal_actions()
-        ron_actions = [a for a in legal_actions if a.type == ActionType.RON]
+        ron_actions = [a for a in legal_actions if a.action_type == ActionType.RON]
         assert len(ron_actions) > 0, f"No RON actions found. Legal actions: {legal_actions}"
         assert ron_actions[0].tile == 3
 
@@ -165,7 +165,7 @@ class TestChankan:
         assert 1 in env.active_players
 
         legal_actions = obs_dict[1].legal_actions()
-        ron_actions = [a for a in legal_actions if a.type == ActionType.RON]
+        ron_actions = [a for a in legal_actions if a.action_type == ActionType.RON]
         assert len(ron_actions) > 0
         assert ron_actions[0].tile == 111
 
@@ -230,7 +230,7 @@ class TestChankan:
 
         obs = env.get_observations([0])[0]
         legals = obs.legal_actions()
-        ankan = [a for a in legals if a.type == ActionType.ANKAN]
+        ankan = [a for a in legals if a.action_type == ActionType.ANKAN]
         assert len(ankan) > 0
         assert ankan[0].tile in [0, 1, 2, 3]
         assert sorted(ankan[0].consume_tiles) == [0, 1, 2, 3]
@@ -255,7 +255,7 @@ class TestChankan:
 
         obs = env.get_observations([0])[0]
         legals = obs.legal_actions()
-        ankan = [a for a in legals if a.type == ActionType.ANKAN]
+        ankan = [a for a in legals if a.action_type == ActionType.ANKAN]
         assert len(ankan) > 0
         assert ankan[0].tile == 0  # In Riichi, must be the drawn tile (or equivalent type)
         assert sorted(ankan[0].consume_tiles) == [0, 1, 2, 3]

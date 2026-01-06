@@ -35,7 +35,7 @@ def test_temporary_furiten_chankan():
 
     # P3 should be offered Ron.
     assert 3 in obs_dict
-    acts = [a for a in obs_dict[3].legal_actions() if a.type == ActionType.Ron]
+    acts = [a for a in obs_dict[3].legal_actions() if a.action_type == ActionType.Ron]
     assert len(acts) > 0, "P3 should be offered Ron on 5s originally"
 
     # P3 PASSES.
@@ -53,12 +53,8 @@ def test_temporary_furiten_chankan():
     obs_dict_2 = env.step({2: Action(ActionType.Discard, discard_tile_5s, [])})
 
     if 3 in obs_dict_2:
-        acts_2 = [a for a in obs_dict_2[3].legal_actions() if a.type == ActionType.Ron]
+        acts_2 = [a for a in obs_dict_2[3].legal_actions() if a.action_type == ActionType.Ron]
         assert len(acts_2) == 0, "P3 should NOT be offered Ron due to Temporary Furiten"
     else:
         # If P3 not in obs, it means no actions offered (correct).
         pass
-
-
-if __name__ == "__main__":
-    test_temporary_furiten_chankan()

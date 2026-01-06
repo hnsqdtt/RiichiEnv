@@ -1,3 +1,5 @@
+import json
+
 from riichienv import Action, ActionType, RiichiEnv
 
 
@@ -19,16 +21,14 @@ def test_select_action_from_mjai_discard():
     obs = obs_dict[0]
 
     # Get a legal discard
-    legal_discards = [a for a in obs.legal_actions() if a.type == ActionType.DISCARD]
+    legal_discards = [a for a in obs.legal_actions() if a.action_type == ActionType.DISCARD]
     target_act = legal_discards[0]
-    import json
-
     mjai_resp = json.loads(target_act.to_mjai())
 
     # Select from MJAI
     selected = obs.select_action_from_mjai(mjai_resp)
     assert selected is not None
-    assert selected.type == ActionType.DISCARD
+    assert selected.action_type == ActionType.DISCARD
     assert selected.tile == target_act.tile
 
 
@@ -47,17 +47,16 @@ def test_select_action_from_mjai_chi():
     obs_dict = env.step({0: Action(ActionType.DISCARD, tile=8)})
 
     obs1 = obs_dict[1]
-    chi_acts = [a for a in obs1.legal_actions() if a.type == ActionType.CHI]
+    chi_acts = [a for a in obs1.legal_actions() if a.action_type == ActionType.CHI]
     assert len(chi_acts) > 0
 
     target_act = chi_acts[0]
-    import json
 
     mjai_resp = json.loads(target_act.to_mjai())
 
     selected = obs1.select_action_from_mjai(mjai_resp)
     assert selected is not None
-    assert selected.type == ActionType.CHI
+    assert selected.action_type == ActionType.CHI
     assert set(selected.consume_tiles) == set(target_act.consume_tiles)
 
 
@@ -69,4 +68,4 @@ def test_select_action_from_mjai_none():
 
     selected = obs1.select_action_from_mjai({"type": "none"})
     assert selected is not None
-    assert selected.type == ActionType.PASS
+    assert selected.action_type == ActionType.PASS

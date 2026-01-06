@@ -28,8 +28,8 @@ def test_no_chi_during_riichi():
     obs2 = obs_dict[2]
     actions = obs2.legal_actions()
 
-    chi_actions = [a for a in actions if a.type == ActionType.Chi]
-    pon_actions = [a for a in actions if a.type == ActionType.Pon]
+    chi_actions = [a for a in actions if a.action_type == ActionType.Chi]
+    pon_actions = [a for a in actions if a.action_type == ActionType.Pon]
 
     assert len(chi_actions) == 0, f"Chi should NOT be offered during Riichi! Offered: {chi_actions}"
     assert len(pon_actions) == 0, f"Pon should NOT be offered during Riichi! Offered: {pon_actions}"
@@ -54,12 +54,7 @@ def test_chi_offered_when_not_in_riichi():
     obs2 = obs_dict[2]
     actions = obs2.legal_actions()
 
-    # Debug prints to confirm property names
-    if len(actions) > 0:
-        print(f"DEBUG: dir(actions[0])={dir(actions[0])}")
-        print(f"DEBUG: actions[0].type={actions[0].type}")
-
-    chi_actions = [a for a in actions if a.type == ActionType.Chi]
+    chi_actions = [a for a in actions if a.action_type == ActionType.Chi]
     assert len(chi_actions) > 0, "Player 2 should have Chi actions when NOT in Riichi"
 
 
@@ -83,8 +78,8 @@ def test_no_pon_during_riichi():
     obs2 = obs_dict[2]
     actions = obs2.legal_actions()
 
-    chi_actions = [a for a in actions if a.type == ActionType.Chi]
-    pon_actions = [a for a in actions if a.type == ActionType.Pon]
+    chi_actions = [a for a in actions if a.action_type == ActionType.Chi]
+    pon_actions = [a for a in actions if a.action_type == ActionType.Pon]
 
     assert len(chi_actions) == 0, f"Chi should NOT be offered during Riichi! Offered: {chi_actions}"
     assert len(pon_actions) == 0, f"Pon should NOT be offered during Riichi! Offered: {pon_actions}"

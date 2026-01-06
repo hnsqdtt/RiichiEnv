@@ -49,6 +49,6 @@ def test_valid_ankan_riichi_legality():
     obs2 = obs[2]
     legals = obs2.legal_actions()
 
-    ankan = [a for a in legals if a.type == ActionType.Ankan]
+    ankan = [a for a in legals if a.action_type == ActionType.Ankan]
     print(f"Legals: {legals}")
     assert len(ankan) == 1, f"Ankan should be LEGAL as it does NOT change waits. Legals: {legals}"

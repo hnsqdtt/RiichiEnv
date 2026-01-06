@@ -1,8 +1,6 @@
 #![allow(clippy::useless_conversion)]
 use pyo3::types::{PyAnyMethods, PyDict, PyDictMethods, PyListMethods};
-use pyo3::{
-    pyclass, pymethods, Bound, IntoPy, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject,
-};
+use pyo3::{pyclass, pymethods, Bound, IntoPyObject, Py, PyAny, PyErr, PyResult, Python};
 // IntoPy might be needed for .into_py() calls if I revert?
 // I used .to_object() which needs ToPyObject.
 use rand::prelude::*;
@@ -62,7 +60,7 @@ impl ActionType {
 #[pyclass(module = "riichienv._riichienv")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Action {
-    #[pyo3(get, set, name = "type")]
+    #[pyo3(get, set)]
     pub action_type: ActionType,
     #[pyo3(get, set)]
     pub tile: Option<u8>,
@@ -82,14 +80,14 @@ impl Action {
         }
     }
 
-    pub fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
-        let dict = PyDict::new_bound(py);
+    pub fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Py<PyAny>> {
+        let dict = PyDict::new(py);
         dict.set_item("type", self.action_type as i32)?;
         dict.set_item("tile", self.tile)?;
 
         let cons: Vec<u32> = self.consume_tiles.iter().map(|&x| x as u32).collect();
         dict.set_item("consume_tiles", cons)?;
-        Ok(dict.to_object(py))
+        Ok(dict.unbind().into())
     }
 
     pub fn to_mjai(&self) -> PyResult<String> {
@@ -128,7 +126,7 @@ impl Action {
 
     fn __repr__(&self) -> String {
         format!(
-            "Action(type={:?}, tile={:?}, consume_tiles={:?})",
+            "Action(action_type={:?}, tile={:?}, consume_tiles={:?})",
             self.action_type, self.tile, self.consume_tiles
         )
     }
@@ -171,21 +169,21 @@ impl Observation {
     }
 
     #[getter]
-    pub fn events(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let loads = py.import_bound("json")?.getattr("loads")?;
-        let list = pyo3::types::PyList::empty_bound(py);
+    pub fn events(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let loads = py.import("json")?.getattr("loads")?;
+        let list = pyo3::types::PyList::empty(py);
         for s in &self.events_json {
             list.append(loads.call1((s,))?)?;
         }
-        Ok(list.into_py(py))
+        Ok(list.unbind().into())
     }
 
-    pub fn new_events(&self, py: Python) -> PyResult<PyObject> {
-        let list = pyo3::types::PyList::empty_bound(py);
+    pub fn new_events(&self, py: Python) -> PyResult<Py<PyAny>> {
+        let list = pyo3::types::PyList::empty(py);
         for s in &self.events_json[self.prev_events_size..] {
             list.append(s)?;
         }
-        Ok(list.into_py(py))
+        Ok(list.unbind().into())
     }
 
     pub fn select_action_from_mjai(
@@ -256,20 +254,20 @@ impl Observation {
         Ok(None)
     }
 
-    pub fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<PyObject> {
-        let dict = PyDict::new_bound(py);
+    pub fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Py<PyAny>> {
+        let dict = PyDict::new(py);
         dict.set_item("player_id", self.player_id)?;
         dict.set_item("hand", self.hand.clone())?;
         dict.set_item("events", self.events(py)?)?;
         dict.set_item("prev_events_size", self.prev_events_size)?;
 
-        let actions = pyo3::types::PyList::empty_bound(py);
+        let actions = pyo3::types::PyList::empty(py);
         for a in &self.legal_actions {
             actions.append(a.to_dict(py)?)?;
         }
         dict.set_item("legal_actions", actions)?;
 
-        Ok(dict.to_object(py))
+        Ok(dict.unbind().into())
     }
 
     pub fn legal_actions(&self) -> Vec<Action> {
@@ -281,13 +279,10 @@ impl Observation {
 #[derive(Debug, Clone)]
 pub struct RiichiEnv {
     // Game State
-    #[pyo3(get, set)]
     pub wall: Vec<u8>,
-    #[pyo3(get, set)]
     pub hands: [Vec<u8>; 4],
     #[pyo3(get, set)]
     pub melds: [Vec<Meld>; 4],
-    #[pyo3(get, set)]
     pub discards: [Vec<u8>; 4],
     #[pyo3(get, set)]
     pub current_player: u8,
@@ -323,7 +318,6 @@ pub struct RiichiEnv {
     // Phases
     #[pyo3(get)]
     pub phase: Phase,
-    #[pyo3(get, set)]
     pub active_players: Vec<u8>,
     pub last_discard: Option<(u8, u8)>,
     #[pyo3(get, set)]
@@ -341,7 +335,6 @@ pub struct RiichiEnv {
     #[pyo3(get)]
     pub round_wind: u8,
     // ...
-    #[pyo3(get, set)]
     pub dora_indicators: Vec<u8>,
     #[pyo3(get, set)]
     pub rinshan_draw_count: u8,
@@ -731,6 +724,70 @@ impl RiichiEnv {
         }
     }
 
+    #[getter]
+    fn get_wall(&self) -> Vec<u32> {
+        self.wall.iter().map(|&x| x as u32).collect()
+    }
+
+    #[setter]
+    fn set_wall(&mut self, wall: Vec<u32>) {
+        self.wall = wall.iter().map(|&x| x as u8).collect();
+    }
+
+    #[getter]
+    fn get_hands(&self) -> [Vec<u32>; 4] {
+        [
+            self.hands[0].iter().map(|&x| x as u32).collect(),
+            self.hands[1].iter().map(|&x| x as u32).collect(),
+            self.hands[2].iter().map(|&x| x as u32).collect(),
+            self.hands[3].iter().map(|&x| x as u32).collect(),
+        ]
+    }
+
+    #[setter]
+    fn set_hands(&mut self, hands: [Vec<u32>; 4]) {
+        for (i, h) in hands.iter().enumerate() {
+            self.hands[i] = h.iter().map(|&x| x as u8).collect();
+        }
+    }
+
+    #[getter]
+    fn get_discards(&self) -> [Vec<u32>; 4] {
+        [
+            self.discards[0].iter().map(|&x| x as u32).collect(),
+            self.discards[1].iter().map(|&x| x as u32).collect(),
+            self.discards[2].iter().map(|&x| x as u32).collect(),
+            self.discards[3].iter().map(|&x| x as u32).collect(),
+        ]
+    }
+
+    #[setter]
+    fn set_discards(&mut self, discards: [Vec<u32>; 4]) {
+        for (i, d) in discards.iter().enumerate() {
+            self.discards[i] = d.iter().map(|&x| x as u8).collect();
+        }
+    }
+
+    #[getter]
+    fn get_active_players(&self) -> Vec<u32> {
+        self.active_players.iter().map(|&x| x as u32).collect()
+    }
+
+    #[setter]
+    fn set_active_players(&mut self, active_players: Vec<u32>) {
+        self.active_players = active_players.iter().map(|&x| x as u8).collect();
+    }
+
+    #[getter]
+    fn get_dora_indicators(&self) -> Vec<u32> {
+        self.dora_indicators.iter().map(|&x| x as u32).collect()
+    }
+
+    #[setter]
+    fn set_dora_indicators(&mut self, dora_indicators: Vec<u32>) {
+        self.dora_indicators = dora_indicators.iter().map(|&x| x as u8).collect();
+    }
+
     #[pyo3(signature = (oya=None, wall=None, bakaze=None, scores=None, honba=None, kyotaku=None, seed=None))]
     #[allow(clippy::too_many_arguments)]
     pub fn reset<'py>(
@@ -743,7 +800,7 @@ impl RiichiEnv {
         honba: Option<u8>,
         kyotaku: Option<u32>,
         seed: Option<u64>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         // ... existing reset impl ...
         if let Some(s) = seed {
             self.seed = Some(s);
@@ -782,8 +839,16 @@ impl RiichiEnv {
     }
 
     #[pyo3(signature = (players=None))]
-    fn get_obs_py<'py>(&mut self, py: Python<'py>, players: Option<Vec<u8>>) -> PyResult<PyObject> {
-        Ok(self.get_observations(players).into_py(py))
+    fn get_obs_py<'py>(
+        &mut self,
+        py: Python<'py>,
+        players: Option<Vec<u8>>,
+    ) -> PyResult<Py<PyAny>> {
+        Ok(self
+            .get_observations(players)
+            .into_pyobject(py)?
+            .unbind()
+            .into())
     }
 
     #[pyo3(signature = (players=None))]
@@ -813,7 +878,7 @@ impl RiichiEnv {
         self.round_wind
     }
 
-    pub fn ranks(&self) -> [u8; 4] {
+    pub fn ranks(&self) -> [u32; 4] {
         let mut indices: Vec<usize> = (0..4).collect();
         indices.sort_by(|&a, &b| {
             if self.scores[a] != self.scores[b] {
@@ -824,7 +889,7 @@ impl RiichiEnv {
         });
         let mut ranks = [0; 4];
         for (rank, &idx) in indices.iter().enumerate() {
-            ranks[idx] = (rank + 1) as u8;
+            ranks[idx] = (rank + 1) as u32;
         }
         ranks
     }
@@ -958,14 +1023,14 @@ impl RiichiEnv {
     }
 
     #[getter]
-    pub fn mjai_log(&self, py: Python) -> PyResult<PyObject> {
-        let json = py.import_bound("json")?;
+    pub fn mjai_log(&self, py: Python) -> PyResult<Py<PyAny>> {
+        let json = py.import("json")?;
         let loads = json.getattr("loads")?;
-        let list = pyo3::types::PyList::empty_bound(py);
+        let list = pyo3::types::PyList::empty(py);
         for s in &self.mjai_log {
             list.append(loads.call1((s,))?)?;
         }
-        Ok(list.into_py(py))
+        Ok(list.unbind().into())
     }
 
     #[setter]
@@ -1027,7 +1092,7 @@ impl RiichiEnv {
         &mut self,
         py: Python<'py>,
         actions: HashMap<u8, Action>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         while !self.is_done {
             if self.needs_initialize_next_round {
                 self._initialize_next_round(self.pending_oya_won, self.pending_is_draw);
@@ -1083,23 +1148,7 @@ impl RiichiEnv {
             }
 
             // Phase handling
-            if self.active_players.is_empty() {
-                return self.get_obs_py(py, Some(self.active_players.clone()));
-            }
-
-            // Check if actions provided match active_players
-            // For now assume yes or partial return?
-
-            // If WaitAct
             if self.phase == Phase::WaitAct {
-                // if self.mjai_mode {
-                //     println!(
-                //         "DEBUG RUST: step START. pid={} melds[{}].len={}",
-                //         self.current_player,
-                //         self.current_player,
-                //         self.melds[self.current_player as usize].len()
-                //     );
-                // }
                 if let Some(act) = actions.get(&self.current_player) {
                     if act.action_type == ActionType::Discard {
                         let is_tsumogiri = act.tile == self.drawn_tile;
@@ -1148,13 +1197,6 @@ impl RiichiEnv {
                         } else {
                             vec![]
                         };
-                        println!(
-                            "DEBUG Tsumo: pid={} riichi={} ippatsu={} ura_len={}",
-                            winner,
-                            self.riichi_declared[winner as usize],
-                            self.ippatsu_cycle[winner as usize],
-                            ura.len()
-                        );
                         let agari = calc.calc(tile, self.dora_indicators.clone(), ura, Some(cond));
 
                         let deltas =
@@ -1644,6 +1686,7 @@ impl RiichiEnv {
 
                         if !chankan_ronners.is_empty() {
                             self.active_players = chankan_ronners.clone();
+                            self.active_players.sort();
                             self.pending_kan = Some((claimer, action)); // Store action to resume later
                             self.current_claims = HashMap::new();
                             for &pid in &self.active_players {
@@ -1669,6 +1712,7 @@ impl RiichiEnv {
                     } else {
                         // Pon
                         self.current_player = claimer;
+                        self.missed_agari_doujun[claimer as usize] = false;
                         self.phase = Phase::WaitAct;
                         self.is_rinshan_flag = false;
                         self.drawn_tile = None;
@@ -1696,6 +1740,7 @@ impl RiichiEnv {
                         Some(self.current_player),
                     )?;
                     self.current_player = claimer;
+                    self.missed_agari_doujun[claimer as usize] = false;
                     self.phase = Phase::WaitAct;
                     self.active_players = vec![claimer];
                     self.is_rinshan_flag = false;
@@ -1835,12 +1880,21 @@ impl RiichiEnv {
                 // 6. All Passed -> Next Player
                 let discarder = self.current_player;
 
-                // If riichi_stage, it's accepted
                 if self.riichi_stage[discarder as usize] {
                     self.riichi_stage[discarder as usize] = false;
                     self.riichi_declared[discarder as usize] = true;
                     self.scores[discarder as usize] -= 1000;
+                    self.score_deltas[discarder as usize] -= 1000;
                     self.riichi_sticks += 1;
+                    self.ippatsu_cycle[discarder as usize] = true;
+
+                    // Check for Double Riichi
+                    if self.is_first_turn
+                        && self.discards[discarder as usize].len() == 1
+                        && self.melds.iter().all(|m| m.is_empty())
+                    {
+                        self.double_riichi_declared[discarder as usize] = true;
+                    }
 
                     let mut ev = serde_json::Map::new();
                     ev.insert(
@@ -1855,6 +1909,7 @@ impl RiichiEnv {
                 self.phase = Phase::WaitAct;
                 self.needs_tsumo = true;
                 self.active_players = vec![];
+                self.current_claims.clear(); // Clear stale claims
                 continue; // Loop back for tsumo
             }
 
@@ -1921,6 +1976,7 @@ impl RiichiEnv {
         ev.insert("tsumogiri".to_string(), Value::Bool(tsumogiri));
         self._push_mjai_event(Value::Object(ev));
 
+        self.missed_agari_doujun[pid as usize] = false; // Discard ends temporary furiten
         self.nagashi_eligible[pid as usize] &= is_terminal_tile(tile);
 
         self._update_claims(pid, tile);
@@ -1976,18 +2032,7 @@ impl RiichiEnv {
                 || self.double_riichi_declared[pid as usize]
                 || self.riichi_stage[pid as usize]
             {
-                // Riichi logic: Can only Ron (checked later? No, usually cannot call unless Ron allowed. But Ron IS allowed in Riichi).
-                // Wait, Ron is allowed in Riichi.
-                // But this check skips?
-                // Line 1970 says: continue.
-                // Wait! If I am in Riichi, I CAN Ron.
-                // Does this line block Ron?
-                // Standard code:
-                // if self.riichi_declared... { continue; }
-                // This would BLOCK Ron for Riichi players!
-                // Wait, let's check code logic.
-                // Lines 1968-1970 (original):
-                // if self.riichi_declared... continue.
+                // Can still Ron in Riichi
             }
             // Wait, checking original code again.
             if self.is_done {
@@ -2027,7 +2072,6 @@ impl RiichiEnv {
                     .or_default()
                     .push(Action::new(ActionType::Ron, Some(tile), vec![]));
             } else if waits.contains(&(tile / 4)) {
-                // Valid shape (Tenpai) but No Yaku (or unmet conditions) -> Temporary Furiten
                 self.missed_agari_doujun[pid as usize] = true;
             }
         }
@@ -2716,23 +2760,8 @@ impl RiichiEnv {
                         let mut new_waits = AgariCalculator::new(next_hand, next_melds).get_waits();
                         new_waits.sort();
 
-                        if pid == 2 {
-                            println!("DEBUG RUST: pid=2 h14={:?}", h14);
-                            println!("DEBUG RUST: pid=2 t_type={} matches={:?}", t_type, matches);
-                            println!(
-                                "DEBUG RUST: pid=2 old_waits={:?} new_waits={:?}",
-                                old_waits, new_waits
-                            );
-                        }
-
                         if !old_waits.is_empty() && old_waits == new_waits {
                             actions.push(Action::new(ActionType::Ankan, Some(dt), matches));
-                        } else if pid == 2 {
-                            println!(
-                                "DEBUG RUST: pid=2 ANKAN BLOCKED: is_empty={} equal={}",
-                                old_waits.is_empty(),
-                                old_waits == new_waits
-                            );
                         }
                     }
                 }
@@ -3187,33 +3216,33 @@ fn is_terminal_tile(tile: u8) -> bool {
 }
 
 #[allow(dead_code)]
-fn serde_json_to_pyobject(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
+fn serde_json_to_pyobject(py: Python<'_>, value: &Value) -> PyResult<Py<PyAny>> {
     match value {
         Value::Null => Ok(py.None()),
-        Value::Bool(b) => Ok(b.to_object(py)),
+        Value::Bool(b) => Ok(b.into_pyobject(py)?.to_owned().unbind().into()),
         Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Ok(i.to_object(py))
+                Ok(i.into_pyobject(py)?.to_owned().unbind().into())
             } else if let Some(f) = n.as_f64() {
-                Ok(f.to_object(py))
+                Ok(f.into_pyobject(py)?.to_owned().unbind().into())
             } else {
-                Ok(n.to_string().to_object(py))
+                Ok(n.to_string().into_pyobject(py)?.to_owned().unbind().into())
             }
         }
-        Value::String(s) => Ok(s.to_object(py)),
+        Value::String(s) => Ok(s.into_pyobject(py)?.to_owned().unbind().into()),
         Value::Array(arr) => {
-            let list = pyo3::types::PyList::empty_bound(py);
+            let list = pyo3::types::PyList::empty(py);
             for v in arr {
                 list.append(serde_json_to_pyobject(py, v)?)?;
             }
-            Ok(list.to_object(py))
+            Ok(list.unbind().into())
         }
         Value::Object(obj) => {
-            let dict = pyo3::types::PyDict::new_bound(py);
+            let dict = pyo3::types::PyDict::new(py);
             for (k, v) in obj {
                 dict.set_item(k, serde_json_to_pyobject(py, v)?)?;
             }
-            Ok(dict.to_object(py))
+            Ok(dict.unbind().into())
         }
     }
 }

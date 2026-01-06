@@ -1,3 +1,5 @@
+import json
+
 from riichienv import Meld, MeldType, RiichiEnv
 from riichienv.action import ActionType
 
@@ -53,7 +55,7 @@ class TestKakan:
 
         # Check Legal Actions
         legal_actions = obs.legal_actions()
-        kakan_actions = [a for a in legal_actions if a.type == ActionType.KAKAN]
+        kakan_actions = [a for a in legal_actions if a.action_type == ActionType.KAKAN]
 
         assert len(kakan_actions) > 0, "Should have KAKAN action available"
 
@@ -102,8 +104,6 @@ class TestKakan:
                 break
 
         if not found_kakan:
-            import json
-
             print("\nDEBUG: MJAI LOG TAIL:\n", json.dumps(env.mjai_log[-5:], indent=2))
 
         assert found_kakan, "KAKAN event should be logged (type='kakan' with 3 consumed tiles)"

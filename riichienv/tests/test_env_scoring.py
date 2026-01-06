@@ -85,7 +85,7 @@ class TestRiichiScoring:
         # P0 should have Ron option
         assert 0 in obs
         actions = obs[0].legal_actions()
-        ron_action = next((a for a in actions if a.type == ActionType.RON), None)
+        ron_action = next((a for a in actions if a.action_type == ActionType.RON), None)
         assert ron_action is not None
 
         # P0 declares Ron
@@ -132,7 +132,7 @@ class TestRiichiScoring:
 
         # Verify legal actions
         actions = env._get_legal_actions(0)
-        tsumo_act = next((a for a in actions if a.type == ActionType.TSUMO), None)
+        tsumo_act = next((a for a in actions if a.action_type == ActionType.TSUMO), None)
         assert tsumo_act is not None
 
         # Execute Tsumo

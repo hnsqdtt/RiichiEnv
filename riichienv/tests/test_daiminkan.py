@@ -49,7 +49,7 @@ class TestDaiminkan:
         # P1 Should have legal action DAIMINKAN
         obs = env.get_observations([p1])[p1]
         legal_actions = obs.legal_actions()
-        kakan_actions = [a for a in legal_actions if a.type == ActionType.DAIMINKAN]
+        kakan_actions = [a for a in legal_actions if a.action_type == ActionType.DAIMINKAN]
 
         assert len(kakan_actions) > 0, "P1 should have DAIMINKAN option"
         daiminkan_action = kakan_actions[0]

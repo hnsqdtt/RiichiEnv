@@ -26,7 +26,7 @@ impl AgariCalculator {
         let mut aka_dora_count = 0;
         let mut tiles_34 = Vec::with_capacity(tiles_136.len());
 
-        for t in tiles_136 {
+        for &t in &tiles_136 {
             if t == 16 || t == 52 || t == 88 {
                 aka_dora_count += 1;
             }
@@ -201,7 +201,7 @@ impl AgariCalculator {
         for i in 0..crate::types::TILE_MAX {
             if hand_14.counts[i] < 4 {
                 hand_14.add(i as u8);
-                if agari::is_agari(&mut hand_14) {
+                if crate::agari::is_agari(&mut hand_14) {
                     waits.push(i as u8);
                 }
                 hand_14.remove(i as u8);

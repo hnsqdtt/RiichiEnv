@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from .game_mode import GameType
 
 if TYPE_CHECKING:
-    from .env import RiichiEnv
+    from ._riichienv import RiichiEnv
 
 
 class GameRule(ABC):
@@ -62,7 +62,7 @@ class StandardRule(GameRule):
         super().__init__(target_score, max_extension_field, tobi)
         self.end_field = end_field  # 0: East, 1: South, 2: West
 
-    def is_game_over(
+    def is_game_over(  # noqa: PLR0911
         self, env: "RiichiEnv", is_renchan: bool, is_draw: bool = False, is_midway_draw: bool = False
     ) -> bool:
         if self.is_tobi(env):

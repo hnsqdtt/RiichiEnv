@@ -2,7 +2,7 @@ import logging
 import os
 
 
-class bcolors:
+class BaseColors:
     BGRED = "\033[41m"
     BGGREEN = "\033[42m"
     BGYELLOW = "\033[43m"
@@ -44,29 +44,31 @@ def get_logger(name: str | None = None) -> logging.Logger:
     stream_handler.setLevel(logging.INFO)
     formatters = {
         logging.DEBUG: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | "
-            f"{bcolors.CYAN}%(levelname)s{bcolors.ENDC} - "
-            f"{bcolors.CYAN}%(message)s{bcolors.ENDC}",
+            f"{BaseColors.GREEN}%(asctime)s{BaseColors.ENDC} | "
+            f"{BaseColors.CYAN}%(levelname)s{BaseColors.ENDC} - "
+            f"{BaseColors.CYAN}%(message)s{BaseColors.ENDC}",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.INFO: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | {bcolors.CYAN}%(levelname)s{bcolors.ENDC} - %(message)s",
+            f"{BaseColors.GREEN}%(asctime)s{BaseColors.ENDC} | "
+            f"{BaseColors.CYAN}%(levelname)s{BaseColors.ENDC} - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.WARNING: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | "
-            f"{bcolors.YELLOW}WARN{bcolors.ENDC} - "
-            f"{bcolors.YELLOW}%(message)s{bcolors.ENDC}",
+            f"{BaseColors.GREEN}%(asctime)s{BaseColors.ENDC} | "
+            f"{BaseColors.YELLOW}WARN{BaseColors.ENDC} - "
+            f"{BaseColors.YELLOW}%(message)s{BaseColors.ENDC}",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.ERROR: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | "
-            f"{bcolors.RED}%(levelname)s{bcolors.ENDC} - "
-            f"{bcolors.RED}%(message)s{bcolors.ENDC}",
+            f"{BaseColors.GREEN}%(asctime)s{BaseColors.ENDC} | "
+            f"{BaseColors.RED}%(levelname)s{BaseColors.ENDC} - "
+            f"{BaseColors.RED}%(message)s{BaseColors.ENDC}",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
         logging.CRITICAL: logging.Formatter(
-            f"{bcolors.GREEN}%(asctime)s{bcolors.ENDC} | {bcolors.RED}%(levelname)s{bcolors.ENDC} - %(message)s",
+            f"{BaseColors.GREEN}%(asctime)s{BaseColors.ENDC} | "
+            f"{BaseColors.RED}%(levelname)s{BaseColors.ENDC} - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         ),
     }

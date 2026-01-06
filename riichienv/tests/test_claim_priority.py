@@ -85,9 +85,9 @@ class TestClaimPriority:
 
         # Submit Actions
         # P1 Chi
-        action_chi = Action(type=ActionType.CHI, tile=57, consume_tiles=[62, 65])
+        action_chi = Action(ActionType.CHI, tile=57, consume_tiles=[62, 65])
         # P2 Pon
-        action_pon = Action(type=ActionType.PON, tile=57, consume_tiles=[56, 58])
+        action_pon = Action(ActionType.PON, tile=57, consume_tiles=[56, 58])
 
         # If P3 is also active (maybe random hand has something), we need to handle it.
         # For this test, ensure P3 is NOT active or provide dummy pass.
