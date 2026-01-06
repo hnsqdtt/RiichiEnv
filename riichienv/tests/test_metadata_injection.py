@@ -1,9 +1,3 @@
-import os
-import sys
-
-# Ensure riichienv is in path
-sys.path.insert(0, os.path.abspath("riichienv/src"))
-
 from riichienv.visualizer.viewer import MetadataInjector
 
 
