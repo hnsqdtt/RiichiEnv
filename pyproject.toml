@@ -33,6 +33,8 @@ exclude = [
     ".pytest_cache",
     ".ruff_cache",
     ".venv",
+    "demos",
+    "tools",
 ]
 
 line-length = 120
