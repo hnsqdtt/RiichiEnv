@@ -382,7 +382,7 @@ class Replay:
         (function() {{
             const runViewer = (jsCode) => {{
                 try {{
-                    if (!window.RiichiEnvViewer) {{
+                    if (jsCode) {{
                         const script = document.createElement('script');
                         script.text = jsCode;
                         document.head.appendChild(script);
@@ -401,18 +401,19 @@ class Replay:
             }};
 
             if (window.RiichiEnvViewer) {{
-                runViewer(""); // Already loaded
+                runViewer("");
             }} else {{
-                // Decompress and run
                 const b64Data = "{viewer_js_b64}";
                 const compressed = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
                 
                 if (window.DecompressionStream) {{
                     const ds = new DecompressionStream('gzip');
                     const decompressedStream = new Response(compressed).body.pipeThrough(ds);
-                    new Response(decompressedStream).text().then(runViewer);
+                    new Response(decompressedStream).text().then(runViewer).catch(e => {{
+                        document.getElementById("{unique_id}").innerHTML = "Error decompressing: " + e.message;
+                    }});
                 }} else {{
-                    const err = "Error: Browser too old (DecompressionStream missing). Please use a modern browser.";
+                    const err = "Error: Browser too old (DecompressionStream missing).";
                     document.getElementById("{unique_id}").innerHTML = err;
                 }}
             }}

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Standalone replay viewer for RiichiEnv",
   "scripts": {
-    "build": "node scripts/gen_tiles.js && esbuild src/index.ts --bundle --minify --outfile=dist/viewer.js --format=iife --global-name=RiichiEnvViewer && node scripts/compress.js",
+    "build": "node scripts/gen_tiles.js && esbuild src/index.ts --bundle --minify --outfile=dist/viewer.js --format=iife && node scripts/compress.js",
     "watch": "esbuild src/index.ts --bundle --outfile=dist/viewer.js --format=iife --global-name=RiichiEnvViewer --watch"
   },
   "devDependencies": {

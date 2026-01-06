@@ -60,32 +60,26 @@ const main = () => {
                 content = content.replace('<svg', '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
             }
 
-            // Use SVGO for aggressive optimization
-            try {
-                const result = optimize(content, {
-                    path: file,
-                    multipass: true,
-                    plugins: [
-                        'preset-default',
-                        'removeXMLNS',
-                        {
-                            name: 'removeAttributesBySelector',
-                            params: {
-                                selector: 'svg',
-                                attributes: ['width', 'height']
-                            }
-                        }
-                    ]
-                });
+            // Manual cleaning instead of SVGO to avoid breaking complex Inkscape transforms
+            // 1. Remove XML declaration and comments
+            content = content.replace(/<\?xml.*?\?>/gs, '');
+            content = content.replace(/<!--.*?-->/gs, '');
 
-                if (result.error) {
-                    console.warn(`Warning: Failed to optimize ${file}: ${result.error}`);
-                } else {
-                    content = result.data;
-                }
-            } catch (e) {
-                console.warn(`Warning: SVGO error on ${file}: ${e.message}`);
-            }
+            // 2. Remove metadata and namedview
+            content = content.replace(/<metadata.*?>.*?<\/metadata>/gs, '');
+            content = content.replace(/<sodipodi:namedview.*?>.*?<\/sodipodi:namedview>/gs, '');
+            content = content.replace(/<rdf:RDF.*?>.*?<\/rdf:RDF>/gs, '');
+
+            // 3. Remove namespaced attributes (Inkscape, Sodipodi, etc.) but keep xmlns and viewBox
+            content = content.replace(/\s\w+:[^=]+="[^"]*"/g, (match) => {
+                if (match.includes('xlink:href')) return match;
+                if (match.includes('viewBox')) return match;
+                return '';
+            });
+
+            // 4. Remove explicit width/height to allow CSS scaling
+            content = content.replace(/<svg\s+([^>]*?)width="[^"]*"/g, '<svg $1');
+            content = content.replace(/<svg\s+([^>]*?)height="[^"]*"/g, '<svg $1');
 
             // Extra cleaning to ensure it's as flat as possible
             if (content) {
