@@ -1,11 +1,10 @@
-import json
-import sys
 import os
+import sys
 
 # Ensure riichienv is in path
 sys.path.insert(0, os.path.abspath("riichienv/src"))
 
-from riichienv.visualizer.viewer import Replay, MetadataInjector
+from riichienv.visualizer.viewer import MetadataInjector
 
 # Mock Log (Simulate a simple flow)
 mock_log = [

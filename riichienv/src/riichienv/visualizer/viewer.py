@@ -1,44 +1,40 @@
+import copy
+import functools
 import json
 import os
+import traceback
 import uuid
-import copy
-from typing import Any, List, Dict, Optional
+from typing import Any
 
 from IPython.display import HTML
 
+from riichienv import AgariCalculator, Conditions, Meld, MeldType
 from riichienv import convert as cvt
-from riichienv import AgariCalculator, Conditions, Meld, MeldType, Wind
-
-# Load the compiled JS once (or lazy load)
-_VIEWER_JS = None
 
 
+@functools.lru_cache(maxsize=1)
 def _get_viewer_js() -> str:
-    global _VIEWER_JS
-    # Force reload to ensure latest JS is picked up in Jupyter
-    _VIEWER_JS = None
-    if _VIEWER_JS is None:
-        p = os.path.join(os.path.dirname(__file__), "assets", "viewer.js")
-        if not os.path.exists(p):
-            return "console.error('RiichiEnv Viewer JS not found. Please build tools/replay-visualizer first.');"
-        with open(p, "r", encoding="utf-8") as f:
-            _VIEWER_JS = f.read()
-    return _VIEWER_JS
+    # Logic to read the JS file
+    p = os.path.join(os.path.dirname(__file__), "assets", "viewer.js")
+    if not os.path.exists(p):
+        return "console.error('RiichiEnv Viewer JS not found. Please build tools/replay-visualizer first.');"
+    with open(p, encoding="utf-8") as f:
+        return f.read()
 
 
 class MetadataInjector:
-    def __init__(self, events: List[Dict[str, Any]]):
+    def __init__(self, events: list[dict[str, Any]]):
         self.events = copy.deepcopy(events)
-        self.hands: Dict[int, List[int]] = {0: [], 1: [], 2: [], 3: []}
-        self.melds: Dict[int, List[Meld]] = {0: [], 1: [], 2: [], 3: []}  # List of Meld objects
-        self.dora_markers: List[int] = []
+        self.hands: dict[int, list[int]] = {0: [], 1: [], 2: [], 3: []}
+        self.melds: dict[int, list[Meld]] = {0: [], 1: [], 2: [], 3: []}  # List of Meld objects
+        self.dora_markers: list[int] = []
         self.round_wind = 0  # 0: East, 1: South, etc.
         self.bakaze_map = {"E": 0, "S": 1, "W": 2, "N": 3}
         self.oya = 0
         self.riichi_delcared = [False] * 4
         self.tile_counts = {}  # To track unique IDs for string tiles
         self.kyoku_results = []
-        self.last_tile: Optional[str] = None
+        self.last_tile: str | None = None
 
         # State for Conditions
         self.ippatsu_eligible = [False] * 4
@@ -56,7 +52,7 @@ class MetadataInjector:
         self.tile_counts[base_tid] = cnt + 1
         return base_tid + cnt
 
-    def _get_matching_tid(self, hand: List[int], tile_str: str) -> int:
+    def _get_matching_tid(self, hand: list[int], tile_str: str) -> int:
         """Find a tile in hand that matches the tile_str type."""
         target_base = cvt.mjai_to_tid(tile_str)
         # Check for exact match first (e.g. Red vs Non-Red)
@@ -84,8 +80,8 @@ class MetadataInjector:
         # Should not happen if log is valid
         return target_base
 
-    def process(self) -> List[Dict[str, Any]]:
-        for i, ev in enumerate(self.events):
+    def process(self) -> list[dict[str, Any]]:  # noqa: PLR0915
+        for ev in self.events:
             etype = ev["type"]
             actor = ev.get("actor")
 
@@ -115,6 +111,7 @@ class MetadataInjector:
                     self.hands[pid] = sorted([self._get_tid(t) for t in tehai])
 
             elif etype == "tsumo":
+                assert actor is not None
                 self.last_tile = ev.get("pai")
                 tile = self._get_tid(ev["pai"])
                 self.hands[actor].append(tile)
@@ -123,9 +120,9 @@ class MetadataInjector:
                 self.is_chankan = False
 
             elif etype == "dahai":
+                assert actor is not None
                 self.last_tile = ev.get("pai")
                 pai = ev["pai"]
-                tsumogiri = ev["tsumogiri"]
 
                 # Identify which tile was discarded
                 tid = self._get_matching_tid(self.hands[actor], pai)
@@ -154,7 +151,8 @@ class MetadataInjector:
 
                 self.turn_count += 1
 
-            elif etype == "pon" or etype == "chi" or etype == "daiminkan":
+            elif etype in ["pon", "chi", "daiminkan"]:
+                assert actor is not None
                 # Remove consumed tiles from hand
                 consumed = ev["consumed"]  # list of strings
                 for c_str in consumed:
@@ -181,6 +179,7 @@ class MetadataInjector:
                 self.ippatsu_eligible = [False] * 4
 
             elif etype == "kakan":
+                assert actor is not None
                 self.last_tile = ev.get("pai")
                 pai = ev["pai"]
                 tid = self._get_matching_tid(self.hands[actor], pai)
@@ -204,6 +203,7 @@ class MetadataInjector:
                 self.ippatsu_eligible = [False] * 4
 
             elif etype == "ankan":
+                assert actor is not None
                 consumed = ev["consumed"]
                 for c_str in consumed:
                     tid = self._get_matching_tid(self.hands[actor], c_str)
@@ -229,17 +229,16 @@ class MetadataInjector:
 
                 if pai_str:
                     pai_tid = self._get_tid(pai_str)
-                else:
-                    # Fallback if both ev["pai"] and last_tile are missing (Tsumo case)
-                    if actor == target:
-                        # Tsumo: The winning tile should be the last one in hand
-                        if self.hands[actor]:
-                            pai_tid = self.hands[actor][-1]
-                        else:
-                            continue
+                # Fallback if both ev["pai"] and last_tile are missing (Tsumo case)
+                elif actor == target:
+                    # Tsumo: The winning tile should be the last one in hand
+                    if self.hands[actor]:
+                        pai_tid = self.hands[actor][-1]
                     else:
-                        # Ron: Cannot infer win tile without global State/River tracking
                         continue
+                else:
+                    # Ron: Cannot infer win tile without global State/River tracking
+                    continue
 
                 is_tsumo = actor == target
 
@@ -289,7 +288,7 @@ class MetadataInjector:
 
         return self.events
 
-    def _calculate_waits(self, pid: int) -> List[str]:
+    def _calculate_waits(self, pid: int) -> list[str]:
         """Iterate all 34 tiles to find agari candidates."""
         hand = self.hands[pid]
         melds = self.melds[pid]
@@ -310,17 +309,17 @@ class MetadataInjector:
 
 
 class Replay:
-    def __init__(self, log: List[dict[str, Any]]):
+    def __init__(self, log: list[dict[str, Any]]):
         self.log = log
 
     @classmethod
     def from_jsonl(cls, path: str) -> HTML:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             events = [json.loads(line) for line in f]
         return cls(events).show()
 
     @classmethod
-    def from_list(cls, events: List[dict[str, Any]]) -> HTML:
+    def from_list(cls, events: list[dict[str, Any]]) -> HTML:
         return cls(events).show()
 
     def show(self) -> HTML:
@@ -334,8 +333,6 @@ class Replay:
             enriched_log = injector.process()
         except Exception as e:
             # Fallback if injection fails
-            import traceback
-
             traceback.print_exc()
             print(f"Warning: Metadata injection failed: {e}")
             enriched_log = self.log
@@ -353,9 +350,9 @@ class Replay:
         <script>
         (function() {{
             {viewer_js}
-            
+
             const logData = {log_json};
-            
+
             // Wait for DOM or just run if deferred
             if (window.RiichiEnvViewer) {{
                 new window.RiichiEnvViewer("{unique_id}", logData);
@@ -369,7 +366,7 @@ class Replay:
         return HTML(html_content)
 
 
-def show_replay(log: List[dict[str, Any]]) -> HTML:
+def show_replay(log: list[dict[str, Any]]) -> HTML:
     """
     Displays a replay viewer for the given MJAI log.
     Start using Replay.from_list(log).show() instead.
