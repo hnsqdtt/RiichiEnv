@@ -15,29 +15,26 @@
 
 **High-Performance Research Environment for Riichi Mahjong**
 
-注意：現在、まだ安定版のリリースに向けて開発中です。仕様が変更される可能性があります。
-
-- [ ] TODO: Colab badge
-- [ ] TODO: Kaggle Notebook badge
-- [ ] TODO: Build Status Badge
+> [!NOTE]
+> This project is currently under active development. The API and specifications are subject to change before the stable release.
 
 ## ✨ Features
 
-* **High-performance**: Rust implementation for fast state transitions and rollouts
-* **Gym-like API**: Design for reinforcement learning
-* **Compatible with Mortal**: Easy to connect with Mortal Bot using mjai protocol
-* **Various Rules**: Support for various rules. No red dragons, three-player mahjong, etc.
-* **Game Replay**: Save and replay the game on Jupyter notebook
+* **High Performance**: Core logic implemented in Rust for lightning-fast state transitions and rollouts.
+* **Gym-style API**: Intuitive interface designed specifically for reinforcement learning.
+* **Mortal Compatibility**: Seamlessly interface with the Mortal Bot using the standard MJAI protocol.
+* **Rule Flexibility**: Support for diverse rule sets, including no-red-dragon variants and three-player mahjong.
+* **Game Visualization**: Integrated replay viewer for Jupyter Notebooks.
 
 ## 📊 Performance
 
-- [ ] TODO: Add performance comparison with other packages (`mahjong`, `mjx`, `mahjax`, `mortal`)
+- [ ] TODO: Add performance benchmarks compared to other packages (`mahjong`, `mjx`, `mahjax`, `mortal`).
 
 ## 📦 Installation
 
-For now, this package requires **Rust** to build the package.
+Currently, building from source requires the **Rust** toolchain.
 
-- [ ] TODO: Upload the binary wheel packages to PyPI.
+- [ ] TODO: Automated binary wheel distribution on PyPI.
 
 ```bash
 uv add riichienv
@@ -47,11 +44,11 @@ pip install riichienv
 
 ## 🚀 Usage
 
-- [ ] TODO: Support four-player hanchan game without red dragons
-- [ ] TODO: Support three-player game rules
-- [ ] TODO: Example codes for reinforcement learning
+- [ ] TODO: Support four-player half-round (hanchan) without red dragons.
+- [ ] TODO: Complete three-player rule sets.
+- [ ] TODO: Provide reference reinforcement learning examples.
 
-### Gym-like API
+### Gym-style API
 
 ```python
 from riichienv import RiichiEnv
@@ -69,72 +66,71 @@ scores, points, ranks = env.scores(), env.points(), env.ranks()
 print(scores, points, ranks)
 ```
 
-`env.reset()` はゲーム状態を初期して、最初の観測情報を返します。この観測情報は、行動可能なプレイヤーごとに `Observation` オブジェクトを格納した `obs_dict: dict[int, Observation]` です。
+`env.reset()` initializes the game state and returns the initial observations. The returned `obs_dict` maps each active player ID to their respective `Observation` object.
 
 ```python
 >>> from riichienv import RiichiEnv
-... env = RiichiEnv()
-... obs_dict = env.reset()
-... obs_dict
+>>> env = RiichiEnv()
+>>> obs_dict = env.reset()
+>>> obs_dict
 {0: <riichienv._riichienv.Observation object at 0x7fae7e52b6e0>}
 ```
 
-ゲームの終了判定は `env.done()` で行います。
+Use `env.done()` to check if the game has concluded.
 
 ```python
 >>> env.done()
 False
 ```
 
-デフォルトは1局の強制終了です。サドンデスルールありの東風や半荘などのゲームルールの場合、1局が終わった後も終了条件を満たすまで続行します。
+By default, the environment runs a single round (kyoku). For game rules supporting sudden death or standard match formats like East-only or Half-round, the environment continues until the game-end conditions are met.
 
 ### Observation
 
-プレイヤーは `Observation` オブジェクトから行動可能なプレイヤーに与えられる観測情報や、選択可能な行動を取得できます。
-`obs.new_events() -> list[str]` は、プレイヤーが観測する新しいイベントのリストです。イベント情報は MJAI プロトコルでエンコードされた JSON 文字列です。`obs.events: list[str]` プロパティにこれまでの全てのイベントが格納されています。
+The `Observation` object provides all relevant information to a player, including the current game state and available legal actions.
+
+`obs.new_events() -> list[str]` returns a list of new events since the last step, encoded as JSON strings in the MJAI protocol. The full history of events is accessible via `obs.events`.
 
 ```python
 >>> obs = obs_dict[0]
-<riichienv._riichienv.Observation object at 0x7fae7e52b6e0>
-
 >>> obs.new_events()
-['{"id":0,"type":"start_game"}', '{"bakaze":"E","dora_marker":"S","honba":0,"kyoku":1,"kyotaku":0,"oya":0,"scores":[25000,25000,25000,25000],"tehais":[["1m","4m","6m","1p","3p","5p","1s","2s","3s","4s","7s","E","W"],["?","?","?","?","?","?","?","?","?","?","?","?","?"],["?","?","?","?","?","?","?","?","?","?","?","?","?"],["?","?","?","?","?","?","?","?","?","?","?","?","?"]],"type":"start_kyoku"}', '{"actor":0,"pai":"6p","type":"tsumo"}']
+['{"id":0,"type":"start_game"}', '{"bakaze":"E","dora_marker":"S", ...}', '{"actor":0,"pai":"6p","type":"tsumo"}']
 ```
 
-`obs.legal_actions() -> list[Action]` は、プレイヤーが選択可能な行動のリストです。
+`obs.legal_actions() -> list[Action]` provides the list of all valid moves the player can make.
 
 ```python
 >>> obs.legal_actions()
-[Action(action_type=Discard, tile=Some(1), consume_tiles=[]), Action(action_type=Discard, tile=Some(13), consume_tiles=[]), Action(action_type=Discard, tile=Some(23), consume_tiles=[]), Action(action_type=Discard, tile=Some(37), consume_tiles=[]), Action(action_type=Discard, tile=Some(44), consume_tiles=[]), Action(action_type=Discard, tile=Some(54), consume_tiles=[]), Action(action_type=Discard, tile=Some(57), consume_tiles=[]), Action(action_type=Discard, tile=Some(73), consume_tiles=[]), Action(action_type=Discard, tile=Some(78), consume_tiles=[]), Action(action_type=Discard, tile=Some(82), consume_tiles=[]), Action(action_type=Discard, tile=Some(85), consume_tiles=[]), Action(action_type=Discard, tile=Some(96), consume_tiles=[]), Action(action_type=Discard, tile=Some(108), consume_tiles=[]), Action(action_type=Discard, tile=Some(117), consume_tiles=[])]
+[Action(action_type=Discard, tile=Some(1), ...), ...]
 ```
 
-もしあなたが書いているプログラムが MJAI プロトコルで通信する機能を持っている場合は、MJAI 形式の JSON データに対応する選択可能な Action オブジェクトを簡単に取り出すことができます。
+If your agent communicates via the MJAI protocol, you can easily map an MJAI response to a valid `Action` object using `obs.select_action_from_mjai()`.
 
 ```python
 >>> obs.select_action_from_mjai({"type":"dahai","pai":"1m","tsumogiri":False,"actor":0})
 Action(action_type=Discard, tile=Some(1), consume_tiles=[])
 ```
 
-### Various Game Rules
+### Supported Game Rules
 
-`game_type` キーワード引数にルールセット名を与えることでルールを切り替えることができます。
+Switch between different rule sets using the `game_type` keyword argument in the constructor.
 
->NOTE: 最終的に12種類のゲームルールをプリセットとして定義して提供する予定です。
->将来的には飛び終了や1翻縛り、責任払いの無効など、細かいルールをカスタマイズすることも検討します。
+> [!NOTE]
+> We plan to provide 12 standard preset rule sets. In the future, we will also allow granular customization (e.g., enabling/disabling red dragons, sudden death, 1-han minimum, etc.).
 
-| Rule | Players | Rounds | Red Dragons | Available |
-|------|---------|--------|-------------|-----------|
-| `4p-red-single` | 4 | Single | True | ✅️ (Default) |
-| `4p-red-half` | 4 | Half | True | ✅️ |
-| `4p-red-east` | 4 | East | True | ✅️ |
-| `3p-red-single` | 3 | Single | True | not yet |
-| `3p-red-half` | 3 | Half | True | not yet |
-| `3p-red-east` | 3 | East | True | not yet |
+| Rule Set | Players | Duration | Red Dragons | Status |
+|----------|---------|----------|-------------|--------|
+| `4p-red-single` | 4 | 1 Round | Enabled | ✅ Ready (Default) |
+| `4p-red-half` | 4 | Half-round | Enabled | ✅ Ready |
+| `4p-red-east` | 4 | East-only | Enabled | ✅ Ready |
+| `3p-red-single` | 3 | 1 Round | Enabled | 🚧 In progress |
+| `3p-red-half` | 3 | Half-round | Enabled | 🚧 In progress |
+| `3p-red-east` | 3 | East-only | Enabled | 🚧 In progress |
 
-例えば4人半荘赤ドラありのルールの場合、以下のように指定します。
+Example of initializing a four-player half-round game with red dragons:
 
 ```python
-from riichienv import RiichiEnv, GameType
+from riichienv import RiichiEnv
 from riichienv.agents import RandomAgent
 
 agent = RandomAgent()
@@ -151,18 +147,16 @@ print(scores, points, ranks)
 
 ### Compatibility with Mortal
 
-Mortal の mjai Bot とイベント処理フローの互換性を持ちます。
-例えば以下のように実装することで Mortal で実装されたモデルとベンチマークをとることができます。
+RiichiEnv is fully compatible with the Mortal MJAI bot processing flow. You can easily benchmark your models against Mortal using the MJAI event stream.
 
 ```python
 from riichienv import RiichiEnv, Action
-
 from model import load_model
 
 class MortalAgent:
     def __init__(self, player_id: int):
         self.player_id = player_id
-        # Load `libriichi.mjai.Bot` instance
+        # Initialize your libriichi.mjai.Bot or equivalent
         self.model = load_model(player_id, "./mortal_v4.pth")
 
     def act(self, obs) -> Action:
@@ -171,7 +165,7 @@ class MortalAgent:
             resp = self.model.react(event)
 
         action = obs.select_action_from_mjai(resp)
-        assert action is not None, f"No response despite legal actions: {obs.legal_actions()}"
+        assert action is not None, "Mortal must return a legal action"
         return action
 
 env = RiichiEnv(game_type="4p-red-half", mjai_mode=True)
@@ -181,38 +175,38 @@ while not env.done():
     actions = {pid: agents[pid].act(obs) for pid, obs in obs_dict.items()}
     obs_dict = env.step(actions)
 
-scores, points, ranks = env.scores(), env.points(), env.ranks()
-print(scores, points, ranks)
+print(env.scores(), env.points(), env.ranks())
 ```
 
 ### Agari Calculation
 
-`mahjong` パッケージと互換性を持つインターフェースで役と点数計算をすることができます。
+Calculate hands and scores using an interface compatible with the popular `mahjong` package.
 
 ```python
-TBD
+# TBD
 ```
 
 ### Tile Conversion & Hand Parsing
 
-136-tile format, mpsz format, mjai format など、牌の表現方法を変換することができます。
+Standardize between various tile formats (136-tile, MPSZ, MJAI) and easily parse hand strings.
 
 ```python
->> import riichienv.convert as cvt
->> cvt.mpsz_to_tid("1z")
+>>> import riichienv.convert as cvt
+>>> cvt.mpsz_to_tid("1z")
 108
 
->> from riichienv import parse_hand
->> parse_hand("123m406m789m777z")
+>>> from riichienv import parse_hand
+>>> parse_hand("123m406m789m777z")
 ```
 
-詳細については DATA_REPRESENTATION.md を参照ください。
+See [DATA_REPRESENTATION.md](DATA_REPRESENTATION.md) for more details.
 
 ## Rust API
 
->まだ未整備です
+> [!WARNING]
+> The Rust API is currently under construction and may be unstable.
 
-- [ ] TODO: Upload the binary packages to crates.io.
+- [ ] TODO: Publish crates to crates.io.
 
 ```rust
 cargo add riichienv
@@ -220,8 +214,8 @@ cargo add riichienv
 
 ## 🛠 Development
 
-詳細については [CONTRIBUTING.md](CONTRIBUTING.md) と [DEVELOPMENT.md](DEVELOPMENT.md) を参照してください。
+For more architectural details and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md) and [DEVELOPMENT.md](DEVELOPMENT.md).
 
-## LICENSE
+## 📄 License
 
 Apache License 2.0
