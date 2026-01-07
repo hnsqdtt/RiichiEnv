@@ -288,7 +288,7 @@ dependencies = [
 
 [[package]]
 name = "riichienv"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "flate2",
  "hex",
