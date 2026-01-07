@@ -10,7 +10,6 @@ export class Viewer {
     log: MjaiEvent[];
 
     kyokuSelect!: HTMLSelectElement;
-    viewpointSelect!: HTMLSelectElement;
     debugPanel!: HTMLElement;
     // slider!: HTMLInputElement; // Removed
 
@@ -77,6 +76,14 @@ export class Viewer {
 
         this.gameState = new GameState(log);
         this.renderer = new Renderer(viewArea);
+
+        // Handle Viewpoint Change from Renderer (Click on Player Info)
+        this.renderer.onViewpointChange = (pIdx: number) => {
+            if (this.renderer.viewpoint !== pIdx) {
+                this.renderer.viewpoint = pIdx;
+                this.update();
+            }
+        };
 
         this.initControls();
         this.update();
@@ -163,23 +170,6 @@ export class Viewer {
         };
         this.kyokuSelect = kyokuSel;
 
-        // Viewpoint Select
-        const viewSel = document.createElement('select');
-        viewSel.style.padding = '5px';
-        viewSel.style.borderRadius = '4px';
-        ['Self (P0)', 'Right (P1)', 'Opp (P2)', 'Left (P3)'].forEach((lbl, i) => {
-            const opt = document.createElement('option');
-            opt.value = i.toString();
-            opt.text = lbl;
-            viewSel.appendChild(opt);
-        });
-        viewSel.value = '0'; // Default P0
-        viewSel.onchange = () => {
-            this.renderer.viewpoint = parseInt(viewSel.value);
-            this.update();
-        };
-        this.viewpointSelect = viewSel;
-
         // Prev/Next Kyoku Buttons
         const prevKyoku = createBtn('Prev Kyoku', () => {
             let target = 0;
@@ -205,14 +195,6 @@ export class Viewer {
         metaRow.appendChild(prevKyoku);
         metaRow.appendChild(kyokuSel);
         metaRow.appendChild(nextKyoku);
-
-        const spacer = document.createElement('span');
-        spacer.style.margin = '0 10px';
-        spacer.style.borderLeft = '1px solid #999';
-        spacer.style.height = '20px';
-        metaRow.appendChild(spacer);
-
-        metaRow.appendChild(viewSel);
 
         this.controlPanel.appendChild(navRow);
         this.controlPanel.appendChild(metaRow);

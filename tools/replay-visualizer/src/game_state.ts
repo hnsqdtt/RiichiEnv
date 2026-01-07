@@ -5,15 +5,42 @@ const sortHand = (hand: string[]) => {
     const order = (t: string) => {
         if (t === 'back') return 9999;
 
-        const suit = t.slice(-1);
-        let num = parseInt(t[0]);
-        if (t.endsWith('r') || t.startsWith('0')) num = 5;
+        let suit = '';
+        let num = 0;
+        let isRed = false;
+
+        // Handle Honors (z)
+        const honorMap: { [key: string]: number } = {
+            'E': 1, 'S': 2, 'W': 3, 'N': 4, // Winds
+            'P': 5, 'F': 6, 'C': 7          // Dragons (Haku/White, Hatsu/Green, Chun/Red)
+        };
+
+        if (honorMap[t]) {
+            suit = 'z';
+            num = honorMap[t];
+        } else {
+            // Handle Suited Tiles
+            // Formats: "1m", "5mr", "0m" (if used)
+            if (t.endsWith('r')) {
+                isRed = true;
+                suit = t.charAt(t.length - 2); // 5mr -> m
+                num = parseInt(t.charAt(0));
+            } else {
+                suit = t.charAt(t.length - 1); // 1m -> m
+                num = parseInt(t.charAt(0));
+            }
+
+            // Handle "0m" case if present in data (treat as Red 5)
+            if (num === 0) {
+                num = 5;
+                isRed = true;
+            }
+        }
 
         const suitOrder: Record<string, number> = { 'm': 0, 'p': 100, 's': 200, 'z': 300 };
-        const isRed = t.endsWith('r') || t.startsWith('0');
         const redOffset = isRed ? 0.1 : 0;
 
-        return (suitOrder[suit] || 0) + num + redOffset;
+        return (suitOrder[suit] ?? 900) + num + redOffset;
     };
     return [...hand].sort((a, b) => order(a) - order(b));
 };
@@ -154,7 +181,7 @@ export class GameState {
                 this.current.doraMarkers = [e.dora_marker];
                 this.current.currentActor = e.oya;
                 this.current.players.forEach((p, i) => {
-                    p.hand = e.tehais[i].map((t: string) => t); // Clone
+                    p.hand = sortHand(e.tehais[i].map((t: string) => t)); // Clone and sort
                     p.discards = [];
                     p.melds = [];
                     p.riichi = false;
@@ -169,6 +196,7 @@ export class GameState {
             case 'tsumo':
                 if (e.actor !== undefined && e.pai) {
                     this.current.players[e.actor].hand.push(e.pai);
+                    this.current.players[e.actor].hand = sortHand(this.current.players[e.actor].hand);
                     this.current.currentActor = e.actor;
                 }
                 break;
