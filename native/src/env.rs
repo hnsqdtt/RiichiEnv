@@ -315,7 +315,7 @@ pub struct RiichiEnv {
     pub pending_oya_won: bool,
     #[pyo3(get, set)]
     pub pending_is_draw: bool,
-    #[pyo3(get, set)]
+    #[pyo3(get)]
     pub scores: [i32; 4],
     #[pyo3(get, set)]
     pub score_deltas: [i32; 4],
@@ -387,7 +387,9 @@ pub struct RiichiEnv {
     pub round_end_scores: Option<[i32; 4]>,
     pub forbidden_discards: [Vec<u8>; 4],
 
+    #[pyo3(get)]
     pub mjai_log: Vec<String>,
+    #[pyo3(get)]
     pub mjai_log_per_player: [Vec<String>; 4],
     #[pyo3(get)]
     pub player_event_counts: [usize; 4],
@@ -407,6 +409,9 @@ impl RiichiEnv {
     pub(crate) fn _trigger_ryukyoku(&mut self, reason: &str) {
         self._accept_riichi(); // Ensure riichi sticks are collected if pending
         let mut tenpai = [false; 4];
+        let mut final_reason = reason.to_string();
+        let mut nagashi_winners = Vec::new();
+
         if reason == "exhaustive_draw" {
             for (i, tp) in tenpai.iter_mut().enumerate() {
                 let hand = &self.hands[i];
@@ -419,7 +424,6 @@ impl RiichiEnv {
             }
 
             // Nagashi Mangan
-            let mut nagashi_winners = Vec::new();
             for (i, &eligible) in self.nagashi_eligible.iter().enumerate() {
                 if eligible {
                     nagashi_winners.push(i as u8);
@@ -427,6 +431,7 @@ impl RiichiEnv {
             }
 
             if !nagashi_winners.is_empty() {
+                final_reason = "nagashimangan".to_string();
                 for &winner in &nagashi_winners {
                     let is_oya = winner == self.oya;
                     let mut deltas = [0; 4];
@@ -450,13 +455,6 @@ impl RiichiEnv {
                         self.score_deltas[i] += d;
                     }
                 }
-                let mut ev = serde_json::Map::new();
-                ev.insert("type".to_string(), Value::String("ryukyoku".to_string()));
-                ev.insert(
-                    "reason".to_string(),
-                    Value::String("nagashimangan".to_string()),
-                );
-                self._push_mjai_event(Value::Object(ev));
             } else {
                 let num_tp = tenpai.iter().filter(|&&t| t).count();
                 if (1..=3).contains(&num_tp) {
@@ -473,13 +471,17 @@ impl RiichiEnv {
 
         let mut ev = serde_json::Map::new();
         ev.insert("type".to_string(), Value::String("ryukyoku".to_string()));
-        ev.insert("reason".to_string(), Value::String(reason.to_string()));
+        ev.insert("reason".to_string(), Value::String(final_reason.clone()));
         self._push_mjai_event(Value::Object(ev));
 
         let mut is_renchan = false;
-        if reason == "exhaustive_draw" {
+        if final_reason == "exhaustive_draw" {
             is_renchan = tenpai[self.oya as usize];
-        } else if ["kyushu_kyuhai", "suurechi", "suukansansen", "sufuurenta"].contains(&reason) {
+        } else if final_reason == "nagashimangan" {
+            is_renchan = nagashi_winners.contains(&self.oya);
+        } else if ["kyushu_kyuhai", "suurechi", "suukansansen", "sufuurenta"]
+            .contains(&final_reason.as_str())
+        {
             is_renchan = true;
         }
 
@@ -940,6 +942,16 @@ impl RiichiEnv {
             .into())
     }
 
+    pub fn set_scores(&mut self, scores: Vec<i32>) -> PyResult<()> {
+        if scores.len() != 4 {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                "Scores must be length 4",
+            ));
+        }
+        self.scores.copy_from_slice(&scores);
+        Ok(())
+    }
+
     #[pyo3(signature = (players=None))]
     pub fn get_observations(&mut self, players: Option<Vec<u8>>) -> HashMap<u8, Observation> {
         let targets = players.unwrap_or_else(|| (0..4).collect());
@@ -1185,6 +1197,10 @@ impl RiichiEnv {
         while !self.is_done {
             if self.needs_initialize_next_round {
                 self._initialize_next_round(self.pending_oya_won, self.pending_is_draw);
+                if self.is_done {
+                    // Game ended during initialization (e.g. Sudden Death)
+                    return self.get_obs_py(py, Some(self.active_players.clone()));
+                }
             }
             if self.needs_tsumo {
                 // Midway draws logic

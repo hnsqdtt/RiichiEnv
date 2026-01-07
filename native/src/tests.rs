@@ -242,6 +242,7 @@ mod unit_tests {
         env.scores = [25000, 25000, 25000, 25000];
         // We also need to set needs_initialize_next_round to false initially
         env.needs_initialize_next_round = false;
+        env.nagashi_eligible = [false; 4];
 
         // Trigger Ryukyoku (draw)
         env._trigger_ryukyoku("exhaustive_draw");
