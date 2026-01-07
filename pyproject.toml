@@ -15,14 +15,14 @@ classifiers = [
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 
-[project.urls]
-Homepage = "https://github.com/smly/RiichiEnv"
-Issues = "https://github.com/smly/RiichiEnv/issues"
-
 dependencies = [
     "pyyaml>=6.0.3",
     "ipython",
 ]
+
+[project.urls]
+Homepage = "https://github.com/smly/RiichiEnv"
+Issues = "https://github.com/smly/RiichiEnv/issues"
 
 [build-system]
 requires = ["maturin>=1.8.7,<2.0"]
