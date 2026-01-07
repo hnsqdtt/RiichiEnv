@@ -1,12 +1,12 @@
 <div align="center">
-<img src="docs/assets/logo.jpg" width="35%">
+<img src="https://raw.githubusercontent.com/smly/RiichiEnv/main/docs/assets/logo.jpg" width="35%">
 
 <br />
 <br />
 
 [![CI](https://github.com/smly/RiichiEnv/actions/workflows/ci.yml/badge.svg)](https://github.com/smly/RiichiEnv/actions/workflows/ci.yml)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/smly/RiichiEnv/blob/main/demos/replay_demo.ipynb)
-[![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://kaggle.com/kernels/welcome?src=https://github.com/smly/RiichiEnv/blob/main/demos/replay_demo.ipynb)
+[![Kaggle](https://kaggle.com/static/images/open-in-kaggle.svg)](https://www.kaggle.com/code/confirm/riichienv-replay-viewer-demo/notebook)
 ![PyPI - Version](https://img.shields.io/pypi/v/riichienv)
 ![License](https://img.shields.io/github/license/smly/riichienv)
 
