@@ -1234,7 +1234,7 @@ impl RiichiEnv {
     ) -> PyResult<Py<PyAny>> {
         // println!("DEBUG RUST: step called. is_done={}", self.is_done);
         while !self.is_done {
-            if let Some(act) = actions.get(&self.current_player) {
+            if let Some(_act) = actions.get(&self.current_player) {
                 // println!("DEBUG RUST: Processing action for player {}: {:?}", self.current_player, act);
             }
             if self.needs_initialize_next_round {

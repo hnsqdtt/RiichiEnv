@@ -51,7 +51,7 @@ def test_chankan_kokushi_tenhou_default():
     # Player 0 performs Ankan with 9p
     action = Action(ActionType.ANKAN, 71, [68, 69, 70, 71])
 
-    obs_dict = env.step({0: action})
+    env.step({0: action})
 
     # Expect: Ankan executed successfully.
     # Since checking is disabled, it should NOT enter WaitResponse for Chankan.
