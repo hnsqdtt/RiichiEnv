@@ -157,7 +157,7 @@ class TestChankan:
 
     def test_kokushi_ankan_ron_tenhou(self):
         """
-        Verify that Kokushi Musou can Ron on an ANKAN.
+        Verify that Kokushi Musou cannot Ron on an ANKAN under Tenhou rules.
         """
         rule = GameRule.default_tenhou()
 
