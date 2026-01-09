@@ -196,11 +196,11 @@ export class HandRenderer {
                 });
 
                 Object.assign(div.style, {
-                    width: '40px', // Original width
-                    height: '56px',
+                    width: '42px', // Rotated height becomes width (42px)
+                    height: '42px', // Match upright height
                     position: 'relative',
-                    marginLeft: '8px',
-                    marginRight: '8px'
+                    marginLeft: '4px',
+                    marginRight: '4px'
                 });
 
                 // Wrapper to rotate
@@ -216,13 +216,7 @@ export class HandRenderer {
                     alignItems: 'center'
                 });
 
-                // If multiple tiles (Kakan), we want them to look like they are stacked on top of each other?
-                // The original code was:
-                // col.tiles.forEach -> inner div.
-                // inner div had no display style, so block.
-                // So they stack vertically.
-                // Rotated 90deg -> Horizontal stack.
-                // Checks out.
+                // ... (Kakan logic comments)
 
                 col.tiles.forEach((t, idx) => {
                     const inner = document.createElement('div');
@@ -232,23 +226,23 @@ export class HandRenderer {
                         height: '42px',
                         display: 'block' // Ensure block
                     });
-                    // Adjust scaling for rotated tiles to match visual size?
-                    // original renderer had inner div with no special styling other than size?
-                    // Let's re-read renderer.ts snippet if possible or just infer.
-                    // It said:
-                    // inner.className = 'tile-rotated' was for River.
-                    // For Meld, it was doing:
-                    // if (col.rotate) { ... }
-                    // It actually didn't seem to set inner style much?
-                    // Let's assume block stacking.
+
+                    // Kakan stacking logic:
+                    // If multiple tiles (Kakan), we stack them.
+                    // Since we are in a flex center/center rotated div, they will stack horizontally (visually vertical).
+                    // We might need negative margins to overlap if desired, but default stacking is fine for 2D.
+                    // Actually, for Kakan, we want the second tile to be "above" (visually top).
+                    // In a row-reverse or just normal row?
+                    // Let's standard append.
+
                     rotator.appendChild(inner);
                 });
                 div.appendChild(rotator);
             } else {
                 // Upright
                 Object.assign(div.style, {
-                    width: '40px',
-                    height: '56px',
+                    width: '30px',  // Reduced from 40px to match meld scale
+                    height: '42px', // Reduced from 56px to match meld scale
                     display: 'flex',
                     alignItems: 'flex-end',
                     justifyContent: 'center'
