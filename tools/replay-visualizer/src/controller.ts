@@ -78,7 +78,15 @@ export class ReplayController {
                 // Check event type for delay
                 const state = this.viewer.gameState.getState();
                 const evt = state.lastEvent;
-                const delay = (evt && evt.type === 'end_kyoku') ? 3000 : 200;
+                let delay = 200;
+
+                if (evt) {
+                    if (evt.type === 'end_kyoku') {
+                        delay = 3000;
+                    } else if (['pon', 'chi', 'kan', 'ankan', 'daiminkan', 'kakan', 'reach', 'reach_accepted', 'hora'].includes(evt.type)) {
+                        delay = 1200; // 1s + 200ms standard
+                    }
+                }
 
                 this.autoPlayTimer = window.setTimeout(loop, delay);
             };

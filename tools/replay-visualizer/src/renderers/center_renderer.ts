@@ -30,7 +30,13 @@ export class CenterRenderer {
             if (onCenterClick) onCenterClick();
         };
 
-        const doraHtml = state.doraMarkers.map((t: string) =>
+        // Dora: Always 5 tiles. Fill missing with 'back'.
+        const doraTiles = [...state.doraMarkers];
+        while (doraTiles.length < 5) {
+            doraTiles.push('back');
+        }
+
+        const doraHtml = doraTiles.map((t: string) =>
             `<div style="width:28px; height:38px;">${TileRenderer.getTileHtml(t)}</div>`
         ).join('');
 
@@ -43,12 +49,11 @@ export class CenterRenderer {
         };
 
         center.innerHTML = `
-            <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 5px;">
-                ${formatRound(state.round)} <span style="font-size:0.8em; opacity:0.8; margin-left:5px;">Honba: ${state.honba}</span>
+            <div style="margin-bottom: 8px;">
+                <span style="font-size: 1.2em; font-weight: bold;">${formatRound(state.round)}-${state.honba}</span>
+                <span style="font-size: 0.9em; margin-left: 5px;">Depo: ${state.kyotaku}</span>
             </div>
-            <div style="margin-bottom: 8px;">Kyotaku: ${state.kyotaku}</div>
             <div style="display:flex; align-items: center; gap: 5px;">
-                <span>Dora:</span>
                 <div style="display:flex; gap:2px;">
                     ${doraHtml}
                 </div>
