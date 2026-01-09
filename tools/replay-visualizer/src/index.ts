@@ -3,7 +3,7 @@ import { Renderer } from './renderer';
 import { MjaiEvent } from './types';
 import { ReplayController } from './controller';
 import {
-    ICON_EYE, ICON_EYE_OFF, ICON_ARROW_LEFT, ICON_ARROW_RIGHT,
+    ICON_EYE, ICON_ARROW_LEFT, ICON_ARROW_RIGHT,
     ICON_CHEVRON_LEFT, ICON_CHEVRON_RIGHT, ICON_PLAY_PAUSE
 } from './icons';
 
@@ -146,8 +146,10 @@ export class Viewer {
         this.renderer = new Renderer(viewArea);
 
         // Create Buttons
+        // Create Buttons
         rightSidebar.appendChild(createBtn('btn-log', ICON_EYE, "Debug"));
-        rightSidebar.appendChild(createBtn('btn-hide', ICON_EYE_OFF, "Hide/Show All"));
+        // Hide Button REMOVED
+
         rightSidebar.appendChild(createBtn('btn-pturn', ICON_ARROW_LEFT, "Prev Round"));
         rightSidebar.appendChild(createBtn('btn-nturn', ICON_ARROW_RIGHT, "Next Round"));
         rightSidebar.appendChild(createBtn('btn-prev', ICON_CHEVRON_LEFT, "Prev Step"));
@@ -237,11 +239,7 @@ export class Viewer {
         // Log Button
         document.getElementById('btn-log')!.onclick = () => this.controller.toggleLog(document.getElementById('btn-log')!, this.debugPanel);
 
-        // Hide Button (New)
-        document.getElementById('btn-hide')!.onclick = () => {
-            this.renderer.toggleHideOpponentHands();
-            this.renderer.render(this.gameState.getState(), this.debugPanel); // Re-render to apply visibility
-        };
+        // Hide Button REMOVED
 
         // Navigation
         document.getElementById('btn-prev')!.onclick = () => this.controller.stepBackward();

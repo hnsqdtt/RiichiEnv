@@ -45,16 +45,6 @@ export class Renderer {
     onCenterClick: (() => void) | null = null;
     private readonly BASE_SIZE = 800;
 
-    private _hideOpponentHands: boolean = false;
-
-    public toggleHideOpponentHands() {
-        this._hideOpponentHands = !this._hideOpponentHands;
-    }
-
-    public get hideOpponentHands(): boolean {
-        return this._hideOpponentHands;
-    }
-
     resize(width: number) {
         if (!this.boardElement) return;
         const scale = width / this.BASE_SIZE;
@@ -234,11 +224,7 @@ export class Renderer {
             const playerState = state.players[i];
             const hand = HandRenderer.renderHand(playerState.hand, playerState.melds, i);
 
-            // HIDE HANDS LOGIC
-            // If hideOpponentHands is true, hide everyone except rel === 0 (Bottom)
-            if (this._hideOpponentHands && relIndex !== 0) {
-                hand.style.visibility = 'hidden';
-            }
+            // HIDE HANDS LOGIC REMOVED
 
             // Assuming positionElement and handsTarget are part of the class or a refactor
             // For now, append directly to pDiv as per original structure,
