@@ -45,6 +45,16 @@ export class Renderer {
     onCenterClick: (() => void) | null = null;
     private readonly BASE_SIZE = 800;
 
+    private _hideOpponentHands: boolean = false;
+
+    public toggleHideOpponentHands() {
+        this._hideOpponentHands = !this._hideOpponentHands;
+    }
+
+    public get hideOpponentHands(): boolean {
+        return this._hideOpponentHands;
+    }
+
     resize(width: number) {
         if (!this.boardElement) return;
         const scale = width / this.BASE_SIZE;
@@ -218,12 +228,23 @@ export class Renderer {
             const infoBox = InfoRenderer.renderPlayerInfo(p, i, this.viewpoint, state.currentActor, this.onViewpointChange || (() => { }));
             pDiv.appendChild(infoBox);
 
+            // Render Hand
+            // Note: HandRenderer now expects player index to handle meld alignment relative to them?
+            // Actually HandRenderer implementation I recall checking used `playerIndex` for melds.
+            const playerState = state.players[i];
+            const hand = HandRenderer.renderHand(playerState.hand, playerState.melds, i);
 
-            // Hand & Melds Area
-            const handArea = HandRenderer.renderHand(p.hand, p.melds, i);
-            pDiv.appendChild(handArea);
+            // HIDE HANDS LOGIC
+            // If hideOpponentHands is true, hide everyone except rel === 0 (Bottom)
+            if (this._hideOpponentHands && relIndex !== 0) {
+                hand.style.visibility = 'hidden';
+            }
 
-            pDiv.appendChild(handArea);
+            // Assuming positionElement and handsTarget are part of the class or a refactor
+            // For now, append directly to pDiv as per original structure,
+            // but keep the new hand variable and hide logic.
+            pDiv.appendChild(hand);
+
             wrapper.appendChild(pDiv);
             board.appendChild(wrapper);
         });

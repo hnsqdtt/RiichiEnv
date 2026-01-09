@@ -5,7 +5,7 @@ export const VIEWER_CSS = `
         aspect-ratio: 1/1;
         max-width: 900px;
         margin: 0 auto;
-        background-color: #2d5a27;
+        background-color: rgb(29, 71, 23);
         border-radius: 12px;
         overflow: hidden;
         font-size: 14px;
@@ -137,7 +137,7 @@ export const VIEWER_CSS = `
         justify-content: center;
         background: transparent;
         color: white;
-        border: 1px solid #666;
+        border: 0px solid #666;
         border-radius: 8px;
         cursor: pointer;
         user-select: none;

@@ -2,6 +2,10 @@ import { GameState } from './game_state';
 import { Renderer } from './renderer';
 import { MjaiEvent } from './types';
 import { ReplayController } from './controller';
+import {
+    ICON_EYE, ICON_EYE_OFF, ICON_ARROW_LEFT, ICON_ARROW_RIGHT,
+    ICON_CHEVRON_LEFT, ICON_CHEVRON_RIGHT, ICON_PLAY_PAUSE
+} from './icons';
 
 export class Viewer {
     gameState: GameState;
@@ -18,31 +22,17 @@ export class Viewer {
         this.container = el;
         this.log = log;
 
-        // Setup DOM Structure: 2-Column Flex (Main Area + Right Sidebar)
-        // Reset Body / HTML to prevent default margins causing scrollbars
-        document.body.style.margin = '0';
-        document.body.style.padding = '0';
-        document.body.style.overflow = 'hidden';
-        document.body.style.height = '100vh';
-        document.body.style.width = '100vw';
-        document.documentElement.style.margin = '0';
-        document.documentElement.style.padding = '0';
-        document.documentElement.style.overflow = 'hidden';
-        document.documentElement.style.height = '100vh';
-        document.documentElement.style.width = '100vw';
-
-        this.container.innerHTML = '';
+        // ... (styles) ...
         this.container.innerHTML = '';
         Object.assign(this.container.style, {
-            display: 'block', // Block for auto margins
-            // width/height will be set by resize logic
+            display: 'block',
             maxWidth: '100%',
-            overflow: 'hidden', // Hide overflow from transform
+            overflow: 'hidden',
             backgroundColor: '#000',
             margin: '0',
             padding: '0',
-            border: 'none', // Remove the 1px border added by Python viewer
-            boxSizing: 'border-box' // Ensure padding/borders don't increase width
+            border: 'none',
+            boxSizing: 'border-box'
         });
 
         // 1. Scrollable/Centering Container
@@ -51,88 +41,74 @@ export class Viewer {
             flex: '1',
             width: '100%',
             height: '100%',
-            overflow: 'hidden', // Disable scrolling, strictly 'contain'
-            // Let's keep it simple: Center content.
+            overflow: 'hidden',
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'flex-start', // Top Align
-            // Usually board is 900px. If screen is smaller, we want scroll.
-            // If screen is larger, we want center.
+            alignItems: 'flex-start',
             backgroundColor: '#000'
         });
         this.container.appendChild(scrollContainer);
 
-        // 2a. Scale Wrapper (New Intermediate Layer)
-        // This wrapper will have the exact SCALED width/height.
+        // 2a. Scale Wrapper
         const scaleWrapper = document.createElement('div');
         Object.assign(scaleWrapper.style, {
             position: 'relative',
-            // Dimensions set via JS on resize
             overflow: 'hidden'
         });
         scrollContainer.appendChild(scaleWrapper);
 
-        // 2b. Content Wrapper (Board + Sidebar) - High Res Source
+        // 2b. Content Wrapper 
         const contentWrapper = document.createElement('div');
         Object.assign(contentWrapper.style, {
             display: 'flex',
             flexDirection: 'row',
-            alignItems: 'flex-start', // Align top of board and sidebar
-            position: 'absolute', // Absolute within scaleWrapper
+            alignItems: 'flex-start',
+            position: 'absolute',
             top: '0',
             left: '0',
-            width: '970px', // Explicit layout width (900 board + 10 margin + 60 sidebar)
-            height: '900px', // Explicit layout height
+            width: '970px',
+            height: '900px',
             flexShrink: '0',
-            transformOrigin: 'top left' // Always scale from top-left
+            transformOrigin: 'top left'
         });
         scaleWrapper.appendChild(contentWrapper);
 
-        // 3. The View Area - Fixed Base Size 900x900
+        // 3. View Area
         const viewArea = document.createElement('div');
         viewArea.id = `${containerId}-board`;
         Object.assign(viewArea.style, {
-            width: '900px',
-            height: '900px',
-            position: 'relative', // Changed from absolute
-            // No transform needed if in flex
-            backgroundColor: '#2d5a27',
+            width: '880px',
+            height: '880px',
+            position: 'relative',
+            backgroundColor: '#1d4717ff',
             boxShadow: '0 0 20px rgba(0,0,0,0.5)',
-            flexShrink: '0' // Don't shrink board
+            flexShrink: '0'
         });
         contentWrapper.appendChild(viewArea);
 
-        // 4. Right Sidebar (Controls) - Placed next to board
+        // 4. Sidebar
         const rightSidebar = document.createElement('div');
         rightSidebar.id = 'controls';
         Object.assign(rightSidebar.style, {
-            width: '60px', // Slightly narrower?
-            backgroundColor: '#111',
-            // borderLeft: '1px solid #333', // Optional border
+            width: '40px',
+            backgroundColor: '#000000ff',
             display: 'flex',
             flexDirection: 'column',
-            gap: '15px',
-            padding: '20px 10px',
-            marginTop: '20px', // Offset from top to look nice? Or aligned?
-            // User image shows it aligned top, or slightly disjoint.
-            // Let's align top with padding.
+            gap: '10px',
+            padding: '10px 10px',
+            marginTop: '20px',
             alignItems: 'center',
             flexShrink: '0',
             zIndex: '500',
-            height: 'auto', // Height fits content? Or matches board?
-            // If match board, set height 100% (of wrapper).
-            // But contentWrapper height is determined by Board (900).
-            // So height: '100%' should work.
-            // But maybe just let it flow.
-            borderRadius: '0 12px 12px 0', // Rounded corners on right?
-            marginLeft: '10px' // Gap between board and sidebar
+            height: 'auto',
+            borderRadius: '0 12px 12px 0',
+            marginLeft: '0px'
         });
         contentWrapper.appendChild(rightSidebar);
 
         this.debugPanel = document.createElement('div');
         this.debugPanel.className = 'debug-panel';
-        this.debugPanel.id = 'log-panel'; // ID for controller
-        // Debug Panel in boardWrapper so it scrolls with board
+        this.debugPanel.id = 'log-panel';
         Object.assign(this.debugPanel.style, {
             position: 'absolute',
             top: '0',
@@ -140,14 +116,25 @@ export class Viewer {
             width: '100%',
             zIndex: '1000'
         });
-        viewArea.appendChild(this.debugPanel); // Attach to viewArea so it's inside the board
+        viewArea.appendChild(this.debugPanel);
 
-        // Helper to create buttons
-        const createBtn = (id: string, text: string) => {
+        // Helper to create buttons with SVG
+        const createBtn = (id: string, svgContent: string, tooltip: string): HTMLDivElement => {
             const btn = document.createElement('div');
             btn.id = id;
             btn.className = 'icon-btn';
-            btn.textContent = text;
+            btn.title = tooltip;
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '1.5');
+            svg.style.width = '24px';
+            svg.style.height = '24px';
+            svg.innerHTML = svgContent;
+
+            btn.appendChild(svg);
             return btn;
         };
 
@@ -159,12 +146,13 @@ export class Viewer {
         this.renderer = new Renderer(viewArea);
 
         // Create Buttons
-        rightSidebar.appendChild(createBtn('btn-log', '📜'));
-        rightSidebar.appendChild(createBtn('btn-pturn', '⏮️')); // Reusing icons
-        rightSidebar.appendChild(createBtn('btn-nturn', '⏭️'));
-        rightSidebar.appendChild(createBtn('btn-prev', '◀️'));
-        rightSidebar.appendChild(createBtn('btn-next', '▶️'));
-        rightSidebar.appendChild(createBtn('btn-auto', '⏯️'));
+        rightSidebar.appendChild(createBtn('btn-log', ICON_EYE, "Debug"));
+        rightSidebar.appendChild(createBtn('btn-hide', ICON_EYE_OFF, "Hide/Show All"));
+        rightSidebar.appendChild(createBtn('btn-pturn', ICON_ARROW_LEFT, "Prev Round"));
+        rightSidebar.appendChild(createBtn('btn-nturn', ICON_ARROW_RIGHT, "Next Round"));
+        rightSidebar.appendChild(createBtn('btn-prev', ICON_CHEVRON_LEFT, "Prev Step"));
+        rightSidebar.appendChild(createBtn('btn-next', ICON_CHEVRON_RIGHT, "Next Step"));
+        rightSidebar.appendChild(createBtn('btn-auto', ICON_PLAY_PAUSE, "Play/Pause"));
 
         // Pseudo button for Round Selector (hidden or triggered by center?)
         const rBtn = document.createElement('div');
@@ -244,14 +232,25 @@ export class Viewer {
         });
 
         // Wire up buttons
+        // Note: I changed button creation, but IDs are mostly same. 'btn-hide' is new.
+
+        // Log Button
+        document.getElementById('btn-log')!.onclick = () => this.controller.toggleLog(document.getElementById('btn-log')!, this.debugPanel);
+
+        // Hide Button (New)
+        document.getElementById('btn-hide')!.onclick = () => {
+            this.renderer.toggleHideOpponentHands();
+            this.renderer.render(this.gameState.getState(), this.debugPanel); // Re-render to apply visibility
+        };
+
+        // Navigation
         document.getElementById('btn-prev')!.onclick = () => this.controller.stepBackward();
         document.getElementById('btn-next')!.onclick = () => this.controller.stepForward();
-        document.getElementById('btn-auto')!.onclick = (e) => this.controller.toggleAutoPlay(e.target as HTMLElement);
-        document.getElementById('btn-log')!.onclick = (e) => this.controller.toggleLog(e.target as HTMLElement, this.debugPanel);
-
-        document.getElementById('btn-pturn')!.onclick = () => this.controller.prevTurn();
         document.getElementById('btn-nturn')!.onclick = () => this.controller.nextTurn();
+        document.getElementById('btn-pturn')!.onclick = () => this.controller.prevTurn();
+        document.getElementById('btn-auto')!.onclick = () => this.controller.toggleAutoPlay(document.getElementById('btn-auto')!);
 
+        // Ensure log panel is initially hidden if desired, or handled by controller.
 
         // Handle Viewpoint Change from Renderer (Click on Player Info)
         this.renderer.onViewpointChange = (pIdx: number) => {
