@@ -199,8 +199,18 @@ export class Renderer {
                 zIndex: '5'
             });
 
+            // Collect active waits (global) to highlight in ALL hands AND rivers
+            const activeWaits = new Set<string>();
+            const normalize = (t: string) => t.replace('0', '5').replace('r', '');
+
+            state.players.forEach(pl => {
+                if (pl.waits && pl.waits.length > 0) {
+                    pl.waits.forEach(w => activeWaits.add(normalize(w)));
+                }
+            });
+
             // Use independent RiverRenderer
-            const riverDiv = RiverRenderer.renderRiver(p.discards);
+            const riverDiv = RiverRenderer.renderRiver(p.discards, activeWaits);
             riverRow.appendChild(riverDiv);
             pDiv.appendChild(riverRow);
 
@@ -212,7 +222,7 @@ export class Renderer {
             // Note: HandRenderer now expects player index to handle meld alignment relative to them?
             // Actually HandRenderer implementation I recall checking used `playerIndex` for melds.
             const playerState = state.players[i];
-            const hand = HandRenderer.renderHand(playerState.hand, playerState.melds, i);
+            const hand = HandRenderer.renderHand(playerState.hand, playerState.melds, i, activeWaits);
 
             // HIDE HANDS LOGIC REMOVED
 

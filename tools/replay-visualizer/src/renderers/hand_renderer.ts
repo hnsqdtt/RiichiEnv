@@ -1,7 +1,7 @@
 import { TileRenderer } from './tile_renderer';
 
 export class HandRenderer {
-    static renderHand(hand: string[], melds: any[], playerIndex: number): HTMLElement {
+    static renderHand(hand: string[], melds: any[], playerIndex: number, highlightTiles?: Set<string>): HTMLElement {
         // Hand & Melds Area
         const handArea = document.createElement('div');
         Object.assign(handArea.style, {
@@ -28,11 +28,34 @@ export class HandRenderer {
         const totalTiles = hand.length + melds.length * 3;
         const hasTsumo = (totalTiles % 3 === 2);
 
+        const normalize = (t: string) => t.replace('0', '5').replace('r', '');
+
         hand.forEach((t, idx) => {
             const tDiv = document.createElement('div');
             tDiv.style.width = '40px'; tDiv.style.height = '56px';
+            tDiv.style.position = 'relative'; // For absolute overlay
             tDiv.innerHTML = TileRenderer.getTileHtml(t);
             if (hasTsumo && idx === hand.length - 1) tDiv.style.marginLeft = '12px';
+
+            // Check Highlight
+            if (highlightTiles) {
+                const normT = normalize(t);
+                if (highlightTiles.has(normT)) {
+                    // Create Overlay
+                    const overlay = document.createElement('div');
+                    Object.assign(overlay.style, {
+                        position: 'absolute',
+                        top: '0', left: '0',
+                        width: '100%', height: '100%',
+                        backgroundColor: 'rgba(255, 0, 0, 0.4)', // Slightly stronger red for visibility
+                        zIndex: '10',
+                        pointerEvents: 'none',
+                        borderRadius: '4px' // Match tile radius roughly
+                    });
+                    tDiv.appendChild(overlay);
+                }
+            }
+
             tilesDiv.appendChild(tDiv);
         });
         handArea.appendChild(tilesDiv);
