@@ -93,6 +93,21 @@ export const VIEWER_CSS = `
         background-color: ${COLORS.highlightBoard} !important;
     }
 
+    @keyframes tsumo-enter {
+        0% {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .tsumo-anim {
+        animation: tsumo-enter 0.2s ease-out forwards;
+    }
+
     .player-info-box {
         background: rgba(0,0,0,0.6);
         padding: 8px;

@@ -37,7 +37,10 @@ export class HandRenderer {
             tDiv.style.position = 'relative'; // For absolute overlay
             tDiv.innerHTML = TileRenderer.getTileHtml(t);
             // Only separate if isSeparated is true AND it's the very last tile of the hand
-            if (isSeparated && idx === hand.length - 1) tDiv.style.marginLeft = '12px';
+            if (isSeparated && idx === hand.length - 1) {
+                tDiv.style.marginLeft = '12px';
+                tDiv.classList.add('tsumo-anim');
+            }
 
             // Check Highlight
             if (highlightTiles) {
