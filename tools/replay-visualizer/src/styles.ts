@@ -201,8 +201,9 @@ export const VIEWER_CSS = `
         color: #fff;
         padding: 20px;
         border-radius: 8px;
-        max-width: 800px;
-        max-height: 80%;
+        max-width: 95%;
+        width: fit-content;
+        max-height: 90%;
         min-width: 400px;
         overflow-y: auto;
         box-shadow: 0 4px 12px rgba(0,0,0,0.8);
