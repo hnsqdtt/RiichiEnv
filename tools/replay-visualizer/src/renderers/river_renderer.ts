@@ -29,64 +29,65 @@ export class RiverRenderer {
                 cell.style.position = 'relative'; // Important for overlay
                 cell.style.flexShrink = '0'; // Prevent shrinking in 3rd row
 
+                // Create wrapper for tile content (to separate bg highlight from moving tile)
+                const tileWrapper = document.createElement('div');
+                tileWrapper.style.width = '100%';
+                tileWrapper.style.height = '100%';
+
                 // Handle Riichi Rotation
-                let contentContainer = cell;
                 if (d.isRiichi) {
                     // Make space for rotated tile
-                    cell.style.width = '42px';
-
-                    const inner = document.createElement('div');
-                    inner.style.width = '100%'; inner.style.height = '100%';
-                    inner.className = 'tile-rotated';
-                    inner.innerHTML = TileRenderer.getTileHtml(d.tile);
-                    cell.appendChild(inner);
-                    contentContainer = inner;
-                    // User asked for "tile" to be red.
-                    // If rotated, the visual tile is rotated. The buffer is square.
-                    // Overlaying the square cell is simplest and effective.
-                } else {
-                    cell.innerHTML = TileRenderer.getTileHtml(d.tile);
+                    cell.style.width = '46px';
+                    tileWrapper.className = 'tile-rotated';
                 }
+
+                tileWrapper.innerHTML = TileRenderer.getTileHtml(d.tile);
+                cell.appendChild(tileWrapper);
 
                 if (d.isTsumogiri) cell.style.filter = 'brightness(0.7)';
 
-                // Animation for the VERY LAST tile if dahaiAnim is present
-                const idx = discards.indexOf(d);
+                const idx = discards.indexOf(d); // Note: verify this works with duplicates?
+                // discards is state.players[x].discards.
+                // If duplicates exist, indexOf returns first occurence.
+                // But loop is efficient. Can use 2nd arg of forEach for index in *row*,
+                // but we need global index.
+                // Use a counter outside? Or just trust object identity (Wait, discards objects are distinct references?)
+                // In game_state.ts, we push { tile: ..., isRiichi: ... } objects.
+                // New object created each push. So object identity references are unique?
+                // Yes: p.discards.push({ tile: e.pai ... }).
+                // So indexOf is safe.
+
                 const isLast = (idx === discards.length - 1);
                 if (isLast && dahaiAnim) {
-                    contentContainer.classList.add('dahai-anim');
-                    // Calculate offsets
-                    // Y: Hand is at bottom (flex-end). River is above.
-                    // Rough estimation: Vertical distance from Hand Center to River Row Center is ~200px.
-                    // X: 
-                    // If Tsumogiri: From Tsumo Pos (Right of hand, ~220px from center)
-                    // If Tedashi: From Hand Pos (Index based).
-                    // Hand tile width 40px. Hand center is 0. 13 tiles.
-                    // Index 0 is -6.5 * 40 = -260px.
-                    // Index 12 is +260px.
-                    // Discard index k -> (k - 6) * 40.
-                    // River Tile Pos:
-                    // Row 0, 6 tiles centered? No, river row is left aligned?
-                    // River Container is width 214px.
-                    // Actually we need relative X from River Tile to Hand Tile.
-                    // This is hard to get precise without bounding box.
-                    // Approximation should be enough for visual flow.
+                    tileWrapper.classList.add('dahai-anim');
 
+                    // Display Arrow
+                    const arrow = document.createElement('div');
+                    arrow.className = 'dahai-arrow';
+                    cell.appendChild(arrow);
+
+                    // Reset target-y (no shift)
+                    tileWrapper.style.setProperty('--target-y', '0px');
+
+                    // Calculate offsets
+                    // From discard index
+                    // River row width ~214. Tile idx in river (0..5).
+                    // River tile X approx: (idx % 6) * 36 - 100.
+                    // Hand tile X: (discardIdx - 6) * 40.
+                    // Delta X = HandX - RiverX.
                     let dx = 0;
                     if (dahaiAnim.tsumogiri) {
                         dx = 200; // From right side
                     } else {
-                        // From discard index
-                        // River row width ~214. Tile idx in river (0..5).
-                        // River tile X approx: (idx % 6) * 36 - 100.
-                        // Hand tile X: (discardIdx - 6) * 40.
-                        // Delta X = HandX - RiverX.
                         const riverX = (idx % 6) * 36 - 107; // Approx center relative
                         const handX = (dahaiAnim.discardIdx - 6) * 40;
                         dx = handX - riverX;
                     }
-                    contentContainer.style.setProperty('--dx', `${dx}px`);
-                    contentContainer.style.setProperty('--dy', `150px`); // From below
+                    tileWrapper.style.setProperty('--dx', `${dx}px`);
+                    tileWrapper.style.setProperty('--dy', `150px`); // From below
+
+                    // Ensure high z-index for moving tile
+                    cell.style.zIndex = '100';
                 }
 
                 // Highlight Logic
@@ -99,12 +100,12 @@ export class RiverRenderer {
                             top: '0', left: '0',
                             width: '100%', height: '100%',
                             backgroundColor: 'rgba(255, 0, 0, 0.4)',
-                            zIndex: '10',
+                            zIndex: '10', // Just above tile
                             pointerEvents: 'none',
                             borderRadius: '4px'
                         });
-                        // Append to cell (non-rotated parent) so it covers the area
-                        cell.appendChild(overlay);
+                        // Append to wrapper so it moves with tile
+                        tileWrapper.appendChild(overlay);
                     }
                 }
 

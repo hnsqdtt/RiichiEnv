@@ -114,7 +114,7 @@ export const VIEWER_CSS = `
             transform: translate(var(--dx), var(--dy));
         }
         100% {
-            transform: translate(0, 0);
+            transform: translate(0, var(--target-y, 0));
         }
     }
 
@@ -134,6 +134,25 @@ export const VIEWER_CSS = `
     .sort-anim {
         /* Delay 200ms, Duration 200ms. Fill mode both/backwards ensures start state is held during delay */
         animation: sort-slide 0.2s ease-out 0.2s backwards;
+    }
+
+    .dahai-arrow {
+        position: absolute;
+        bottom: -8px; 
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0; 
+        height: 0; 
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 6px solid white; /* Pointing UP at the tile */
+        z-index: 101;
+        animation: fade-in 0.2s ease-out 0.2s backwards;
+    }
+
+    @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 
     .player-info-box {
