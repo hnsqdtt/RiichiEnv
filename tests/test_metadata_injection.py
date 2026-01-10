@@ -1,79 +1,123 @@
+import json
+import os
+
+import pytest
+
 from riichienv.visualizer.viewer import MetadataInjector
 
 
-def test_metadata_injection():
-    # Mock Log (Simulate a simple flow)
-    mock_log = [
-        {
-            "type": "start_kyoku",
-            "bakaze": "E",
-            "dora_marker": "1z",
-            "kyoku": 1,
-            "honba": 0,
-            "kyotaku": 0,
-            "tehais": [
-                ["1m", "1m", "1p", "2p", "3p", "4p", "5p", "6p", "1s", "2s", "3s", "4s", "5s"],
-                ["1s", "1s", "1s", "2s", "2s", "2s", "3s", "3s", "3s", "4s", "4s", "4s", "5s"],
-                ["1m", "1m", "1m", "2m", "2m", "2m", "3m", "3m", "3m", "4m", "4m", "4m", "5m"],
-                ["1p", "1p", "1p", "2p", "2p", "2p", "3p", "3p", "3p", "4p", "4p", "4p", "5p"],
-            ],
-            "oya": 0,
-            "scores": [25000, 25000, 25000, 25000],
-        },
-        {"type": "tsumo", "actor": 0, "pai": "1z"},
-        {"type": "dahai", "actor": 0, "pai": "1z", "tsumogiri": True, "reach": True},
-        {"type": "tsumo", "actor": 0, "pai": "6s"},
-        # Tsumo: fallback to hand[-1]
-        {"type": "hora", "actor": 0, "target": 0, "ura_markers": ["1z"]},
-        # Next round
-        {"type": "end_kyoku"},
-        {
-            "type": "start_kyoku",
-            "bakaze": "E",
-            "dora_marker": "1z",
-            "kyoku": 2,
-            "honba": 0,
-            "kyotaku": 0,
-            "tehais": [
-                ["1m", "1m", "1p", "2p", "3p", "4p", "5p", "6p", "1s", "2s", "3s", "4s", "5s"],
-                ["1s"] * 13,
-                ["1s"] * 13,
-                ["1s"] * 13,
-            ],
-            "oya": 0,
-            "scores": [25000] * 4,
-        },
-        {"type": "dahai", "actor": 3, "pai": "6s", "tsumogiri": False},
-        # Ron: fallback to last_tile ("6s")
-        {"type": "hora", "actor": 0, "target": 3, "ura_markers": []},
-        {"type": "end_kyoku"},
-    ]
+# Load the log once for all tests
+@pytest.fixture(scope="module")
+def enriched_log():
+    # Use the .bak file as requested (now renamed)
+    path = os.path.join(os.path.dirname(__file__), "../tools/replay-visualizer/example_before_injection.jsonl")
+    if not os.path.exists(path):
+        # Fallback if running from root relative path issues
+        path = "tools/replay-visualizer/example_before_injection.jsonl"
 
-    print("Testing MetadataInjector directly...")
-    injector = MetadataInjector(mock_log)
-    enriched = injector.process()
+    with open(path, encoding="utf-8") as f:
+        events = [json.loads(line) for line in f]
 
-    # Start looking for injected meta
+    injector = MetadataInjector(events)
+    return injector.process()
+
+
+def find_kyoku_events(events, bakaze_char, kyoku_num, honba_num):
+    """Finds all events for a specific kyoku."""
+    kyoku_events = []
+    in_kyoku = False
+
+    for ev in events:
+        if ev["type"] == "start_kyoku":
+            if ev.get("bakaze") == bakaze_char and ev.get("kyoku") == kyoku_num and ev.get("honba") == honba_num:
+                in_kyoku = True
+                kyoku_events = [ev]
+            else:
+                in_kyoku = False
+        elif in_kyoku:
+            kyoku_events.append(ev)
+            if ev["type"] == "end_kyoku":
+                in_kyoku = False
+                yield kyoku_events
+
+
+def get_hora_score(kyoku_events):
+    """Extracts score from the first hora event in the kyoku."""
+    for ev in kyoku_events:
+        if ev["type"] == "hora":
+            return ev.get("meta", {}).get("score")
+    return None
+
+
+def test_e2_1_fu_correctness(enriched_log):
+    """
+    E2-1 (East 2, 1 Honba):
+    Expectation: 3 Han 40 Fu.
+    Issue Fixed: Was calculated as 30 Fu due to ID overflow and sorting bugs.
+    """
+    kyokus = list(find_kyoku_events(enriched_log, "E", 2, 1))
+    assert len(kyokus) > 0, "E2-1 not found in log"
+
+    events = kyokus[0]
+    score = get_hora_score(events)
+
+    assert score is not None, "No Hora event in E2-1"
+    assert score["fu"] == 40, f"Expected 40 Fu for E2-1, got {score['fu']}"
+    assert score["han"] == 3
+
+
+def test_e4_0_ippatsu_correctness(enriched_log):
+    """
+    E4-0 (East 4, 0 Honba):
+    Expectation: 4 Han 30 Fu (No Ippatsu).
+    Issue Fixed: Ippatsu was wrongly awarded (5 Han) because it wasn't cleared on subsequent discard.
+    """
+    kyokus = list(find_kyoku_events(enriched_log, "E", 4, 0))
+    assert len(kyokus) > 0, "E4-0 not found in log"
+
+    events = kyokus[0]
+    score = get_hora_score(events)
+
+    assert score is not None, "No Hora event in E4-0"
+
+    # Check Ippatsu (ID 30) is NOT present
+    yaku_ids = score["yaku"]
+    assert 30 not in yaku_ids, f"Ippatsu (30) should not be present in E4-0. Yaku: {yaku_ids}"
+
+    # Check Han/Fu
+    assert score["han"] == 4, f"Expected 4 Han for E4-0, got {score['han']}"
+    assert score["fu"] == 30
+
+
+def test_s4_0_fu_correctness(enriched_log):
+    """
+    S4-0 (South 4, 0 Honba):
+    Expectation: 40 Fu.
+    Issue Fixed: Previous fix for S4-0 regarding 136-tile offsets.
+    """
+    kyokus = list(find_kyoku_events(enriched_log, "S", 4, 0))
+    if not kyokus:
+        pytest.skip("S4-0 not found in log")
+        return
+
+    events = kyokus[0]
+    score = get_hora_score(events)
+
+    assert score is not None, "No Hora event in S4-0"
+    assert score["fu"] == 40, f"Expected 40 Fu for S4-0, got {score['fu']}"
+
+
+def test_waits_calculation(enriched_log):
+    """
+    Verify that waits are calculated and injected into Dahai events.
+    """
     found_waits = False
-    found_score = False
-    found_results = False
-
-    for ev in enriched:
-        if "meta" in ev:
-            if "waits" in ev["meta"]:
-                print(f"Found Waits: {ev['meta']['waits']}")
+    for ev in enriched_log:
+        if ev["type"] == "dahai":
+            if "waits" in ev.get("meta", {}):
                 found_waits = True
-            if "score" in ev["meta"]:
-                print(f"Found Score in Hora: {ev['meta']['score']}")
-                found_score = True
-                # Verify Riichi Yaku (ID 52 is Riichi in some maps, but let's check values or presence if we know IDs)
-                # Actually, riichienv typically uses IDs. 1 = Menzen Tsumo, 2 = Riichi.
-                # Let's check if yaku list is non-empty and contains expected ID (2).
-                if ev.get("actor") == 0 and ev.get("target") == 0:
-                    # This corresponds to the first Tsumo with Reach
-                    yaku_ids = ev["meta"]["score"]["yaku"]
-                    print(f"Yaku IDs: {yaku_ids}")
-                    assert 2 in yaku_ids or 1 in yaku_ids  # Riichi (2) or Menzen Tsumo (1) should be present
-            if "results" in ev["meta"]:
-                print(f"Found Results in EndKyoku: {ev['meta']['results']}")
-                found_results = True
+                waits = ev["meta"]["waits"]
+                assert isinstance(waits, list)
+                break
+
+    assert found_waits, "No waits calculated in any Dahai event"
