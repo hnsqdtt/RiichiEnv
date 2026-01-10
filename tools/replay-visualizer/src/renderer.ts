@@ -223,10 +223,23 @@ export class Renderer {
             pDiv.appendChild(infoBox);
 
             // Render Hand
-            // Note: HandRenderer now expects player index to handle meld alignment relative to them?
-            // Actually HandRenderer implementation I recall checking used `playerIndex` for melds.
+            // Check if this player has just drawn a tile (Tsumo position)
+            // Conditions: 
+            // 1. It is this player's turn (active actor)
+            // 2. The last event was 'tsumo' (they drew) OR 'start_kyoku' (Oya's first 14th tile)
+            // Note: After pon/chi/kan, it is their turn but they did NOT draw from wall (they took from river).
+            // So we do NOT separate.
+            let hasDraw = false;
+            if (state.currentActor === i && state.lastEvent) {
+                if (state.lastEvent.type === 'tsumo' && state.lastEvent.actor === i) {
+                    hasDraw = true;
+                } else if (state.lastEvent.type === 'start_kyoku' && state.lastEvent.oya === i) {
+                    hasDraw = true;
+                }
+            }
+
             const playerState = state.players[i];
-            const hand = HandRenderer.renderHand(playerState.hand, playerState.melds, i, activeWaits);
+            const hand = HandRenderer.renderHand(playerState.hand, playerState.melds, i, activeWaits, hasDraw);
 
             // HIDE HANDS LOGIC REMOVED
 

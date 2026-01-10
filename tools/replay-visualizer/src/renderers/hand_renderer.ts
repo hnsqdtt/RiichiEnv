@@ -1,7 +1,7 @@
 import { TileRenderer } from './tile_renderer';
 
 export class HandRenderer {
-    static renderHand(hand: string[], melds: any[], playerIndex: number, highlightTiles?: Set<string>): HTMLElement {
+    static renderHand(hand: string[], melds: any[], playerIndex: number, highlightTiles?: Set<string>, hasDraw?: boolean): HTMLElement {
         // Hand & Melds Area
         const handArea = document.createElement('div');
         Object.assign(handArea.style, {
@@ -26,7 +26,8 @@ export class HandRenderer {
         });
 
         const totalTiles = hand.length + melds.length * 3;
-        const hasTsumo = (totalTiles % 3 === 2);
+        // Use passed hasDraw flag, default to false if undefined
+        const isSeparated = hasDraw || false;
 
         const normalize = (t: string) => t.replace('0', '5').replace('r', '');
 
@@ -35,7 +36,8 @@ export class HandRenderer {
             tDiv.style.width = '40px'; tDiv.style.height = '56px';
             tDiv.style.position = 'relative'; // For absolute overlay
             tDiv.innerHTML = TileRenderer.getTileHtml(t);
-            if (hasTsumo && idx === hand.length - 1) tDiv.style.marginLeft = '12px';
+            // Only separate if isSeparated is true AND it's the very last tile of the hand
+            if (isSeparated && idx === hand.length - 1) tDiv.style.marginLeft = '12px';
 
             // Check Highlight
             if (highlightTiles) {
