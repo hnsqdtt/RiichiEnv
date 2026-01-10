@@ -365,18 +365,19 @@ class MetadataInjector:
 
 
 class Replay:
-    def __init__(self, log: list[dict[str, Any]]):
+    def __init__(self, log: list[dict[str, Any]], step: int | None = None):
         self.log = log
+        self.step = step
 
     @classmethod
-    def from_jsonl(cls, path: str) -> HTML:
+    def from_jsonl(cls, path: str, step: int | None = None) -> HTML:
         with open(path, encoding="utf-8") as f:
             events = [json.loads(line) for line in f]
-        return cls(events).show()
+        return cls(events, step=step).show()
 
     @classmethod
-    def from_list(cls, events: list[dict[str, Any]]) -> HTML:
-        return cls(events).show()
+    def from_list(cls, events: list[dict[str, Any]], step: int | None = None) -> HTML:
+        return cls(events, step=step).show()
 
     def show(self) -> HTML:
         """
@@ -422,8 +423,9 @@ class Replay:
                     }}
 
                     const logData = {log_json};
+                    const initialStep = {self.step if self.step is not None else "undefined"};
                     if (window.RiichiEnvViewer) {{
-                        new window.RiichiEnvViewer("{unique_id}", logData);
+                        new window.RiichiEnvViewer("{unique_id}", logData, initialStep);
                     }} else {{
                         throw new Error("RiichiEnvViewer global not found after injection");
                     }}

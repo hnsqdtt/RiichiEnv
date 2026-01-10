@@ -17,7 +17,7 @@ export class Viewer {
 
     debugPanel!: HTMLElement;
 
-    constructor(containerId: string, log: MjaiEvent[]) {
+    constructor(containerId: string, log: MjaiEvent[], initialStep?: number) {
         const el = document.getElementById(containerId);
         if (!el) throw new Error(`Container #${containerId} not found`);
         this.container = el;
@@ -167,6 +167,30 @@ export class Viewer {
         this.controller = new ReplayController(this);
         this.controller.setupKeyboardControls(window);
         this.controller.setupWheelControls(viewArea);
+
+        // Initial Seek Logic
+        // Priority: initialStep argument > permalink ?eventStep=N
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventStepParam = urlParams.get('eventStep');
+
+        let targetStep = -1;
+
+        if (typeof initialStep === 'number') {
+            targetStep = initialStep;
+            console.log(`[Viewer] Initializing with explicit step: ${targetStep}`);
+        } else if (eventStepParam) {
+            const parsed = parseInt(eventStepParam, 10);
+            if (!isNaN(parsed)) {
+                targetStep = parsed;
+                console.log(`[Viewer] Initializing with permalink step: ${targetStep}`);
+            }
+        }
+
+        if (targetStep !== -1) {
+            // Note: jumpTo internally clamps values
+            this.gameState.jumpTo(targetStep);
+            this.update(); // Initial update happens at end of constructor, but we set state here
+        }
 
         // Resize Logic to scale the entire content (Board + Sidebar)
         // Resize Logic to scale the entire content (Board + Sidebar)
