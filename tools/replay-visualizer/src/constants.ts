@@ -15,9 +15,9 @@ export const COLORS = {
     boardBackground: '#39416e',
     modalBackground: '#0f1744',
     tableHeaderBackground: '#0f1744',
-    centerInfoBackground: '#0f1744',
+    centerInfoBackground: '#13151b',
 
-    highlightBoard: '#2a3c85',
+    highlightBoard: '#0f1744',
     highlightButton: '#2a3c85',
     activeButtonBg: '#0f1744',
 

@@ -1,3 +1,5 @@
 dist/
 src/tiles.ts
 node_modules/
+assets/ZenAntiqueSoft-Regular.ttf
+assets/char_sprite.png

@@ -73,7 +73,7 @@ export class Renderer {
         oldModals.forEach(el => el.remove());
 
         // Center Info
-        const center = CenterRenderer.renderCenter(state, this.onCenterClick);
+        const center = CenterRenderer.renderCenter(state, this.onCenterClick, this.viewpoint);
         board.appendChild(center);
 
         const angles = [0, -90, 180, 90];
@@ -138,38 +138,7 @@ export class Renderer {
                 pDiv.appendChild(overlay);
             }
 
-            // Riichi Stick (placed between river/info and center)
-            if (p.riichi) {
-                const stick = document.createElement('div');
-                stick.className = 'riichi-stick';
-                Object.assign(stick.style, {
-                    position: 'absolute',
-                    top: '-15px', // Between river (y=10) and Center info
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '100px',
-                    height: '8px',
-                    backgroundColor: 'white',
-                    borderRadius: '4px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: '20'
-                });
-
-                // Red Dot
-                const dot = document.createElement('div');
-                Object.assign(dot.style, {
-                    width: '6px',
-                    height: '6px',
-                    backgroundColor: '#d00', // Red
-                    borderRadius: '50%'
-                });
-                stick.appendChild(dot);
-
-                pDiv.appendChild(stick);
-            }
+            // Riichi Stick rendering moved to CenterRenderer
 
             // Wait Indicator Logic (Persistent)
             if (p.waits && p.waits.length > 0) {

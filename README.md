@@ -2,6 +2,9 @@
 <img src="https://raw.githubusercontent.com/smly/RiichiEnv/main/docs/assets/logo.jpg" width="35%">
 
 <br />
+
+**Accelerating Reproducible Mahjong Research**
+
 <br />
 
 [![CI](https://github.com/smly/RiichiEnv/actions/workflows/ci.yml/badge.svg)](https://github.com/smly/RiichiEnv/actions/workflows/ci.yml)
@@ -13,8 +16,6 @@
 </div>
 
 -----
-
-**High-Performance Research Environment for Riichi Mahjong**
 
 > [!NOTE]
 > This project is currently under active development. The API and specifications are subject to change before the stable release.
@@ -107,6 +108,39 @@ If your agent communicates via the MJAI protocol, you can easily map an MJAI res
 Action(action_type=Discard, tile=Some(1), consume_tiles=[])
 ```
 
+### Compatibility with Mortal
+
+RiichiEnv is fully compatible with the Mortal MJAI bot processing flow. I have confirmed that MortalAgent can execute matches without errors in over 1,000,000+ hanchan games on RiichiEnv.
+
+```python
+from riichienv import RiichiEnv, Action
+from model import load_model
+
+class MortalAgent:
+    def __init__(self, player_id: int):
+        self.player_id = player_id
+        # Initialize your libriichi.mjai.Bot or equivalent
+        self.model = load_model(player_id, "./mortal_v4.pth")
+
+    def act(self, obs) -> Action:
+        resp = None
+        for event in obs.new_events():
+            resp = self.model.react(event)
+
+        action = obs.select_action_from_mjai(resp)
+        assert action is not None, "Mortal must return a legal action"
+        return action
+
+env = RiichiEnv(game_mode="4p-red-half")
+agents = {pid: MortalAgent(pid) for pid in range(4)}
+obs_dict = env.reset()
+while not env.done():
+    actions = {pid: agents[pid].act(obs) for pid, obs in obs_dict.items()}
+    obs_dict = env.step(actions)
+
+print(env.scores(), env.points(), env.ranks())
+```
+
 ### Game Rules and Modes
 
 RiichiEnv separates high-level game flow configuration (Mode) from detailed game mechanics (Rules).
@@ -152,41 +186,7 @@ rule_custom.length_of_game_in_rounds = 8  # Force 8 rounds? (Note: Length is mai
 env = RiichiEnv(game_mode="4p-red-half", rule=rule_custom)
 ```
 
-> [!NOTE]
-> Detailed mechanic flags (like `allows_ron_on_ankan_for_kokushi_musou`) are defined in the `GameRule` struct. See `docs/RULES.md` for a full list of configurable options.
-
-### Compatibility with Mortal
-
-RiichiEnv is fully compatible with the Mortal MJAI bot processing flow. I have confirmed that MortalAgent can execute matches without errors in over 1,000,000+ hanchan games on RiichiEnv.
-
-```python
-from riichienv import RiichiEnv, Action
-from model import load_model
-
-class MortalAgent:
-    def __init__(self, player_id: int):
-        self.player_id = player_id
-        # Initialize your libriichi.mjai.Bot or equivalent
-        self.model = load_model(player_id, "./mortal_v4.pth")
-
-    def act(self, obs) -> Action:
-        resp = None
-        for event in obs.new_events():
-            resp = self.model.react(event)
-
-        action = obs.select_action_from_mjai(resp)
-        assert action is not None, "Mortal must return a legal action"
-        return action
-
-env = RiichiEnv(game_mode="4p-red-half")
-agents = {pid: MortalAgent(pid) for pid in range(4)}
-obs_dict = env.reset()
-while not env.done():
-    actions = {pid: agents[pid].act(obs) for pid, obs in obs_dict.items()}
-    obs_dict = env.step(actions)
-
-print(env.scores(), env.points(), env.ranks())
-```
+Detailed mechanic flags (like `allows_ron_on_ankan_for_kokushi_musou`) are defined in the `GameRule` struct. See [RULES.md](docs/RULES.md) for a full list of configurable options.
 
 ### Tile Conversion & Hand Parsing
 
@@ -222,15 +222,7 @@ Agari(agari=True, yakuman=False, ron_agari=12000, tsumo_agari_oya=0, tsumo_agari
 
 For more architectural details and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md) and [DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md).
 
-## Further Development Plan
-
-- [ ] Add performance benchmarks compared to other packages.
-- [ ] Add support for more game rules.
-- [ ] Add example codes for training agents.
-- [ ] Add high-level mahjong domain API for training agents.
-- [ ] Optimize training performance (e.g., `skip_mjai_logging`, `batch_act`, etc.).
-- [ ] Add interface for batch training.
-- [ ] Add arena mode for evaluating agents.
+Check our [Milestones](https://github.com/smly/RiichiEnv/milestones) for the future roadmap and development plans.
 
 ## 📄 License
 
