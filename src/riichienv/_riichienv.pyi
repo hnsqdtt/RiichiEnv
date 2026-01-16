@@ -156,6 +156,16 @@ class Observation:
     def to_dict(self) -> dict[str, Any]: ...
     def __init__(self, *args: Any, **kwargs: Any): ...
 
+class Y47Turn:
+    token_main: Any
+    token_scalar: Any
+    token_mask: Any
+    action_main: Any
+    action_consume: Any
+    action_consume_mask: Any
+    legal_action_mask: Any
+    def __init__(self, *args: Any, **kwargs: Any): ...
+
 class Kyoku:
     events: list[dict]
     def take_agari_contexts(self) -> list[list[AgariContext]]: ...
@@ -246,6 +256,8 @@ class RiichiEnv:
     def step(
         self, action: Action | int | dict[int, Action] | None = None, *args: Any, **kwargs: Any
     ) -> dict[int, Observation]: ...
+    def reset_y47(self, *args: Any, **kwargs: Any) -> dict[int, Y47Turn]: ...
+    def step_y47(self, action_index: dict[int, int]) -> tuple[dict[int, Y47Turn], Any, bool]: ...
     def done(self) -> bool: ...
     def get_observations(self, players: list[int] | None = None) -> dict[int, Observation]: ...
     def get_obs_py(self, player_id: int) -> Observation: ...
@@ -285,6 +297,7 @@ __all__ = [
     "Observation",
     "Phase",
     "ReplayGame",
+    "Y47Turn",
     "RiichiEnv",
     "Score",
     "Wind",

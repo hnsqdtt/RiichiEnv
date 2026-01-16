@@ -65,6 +65,22 @@ scores, points, ranks = env.scores(), env.points(), env.ranks()
 print(scores, points, ranks)
 ```
 
+### Y47 RL API (fixed tensors)
+
+RiichiEnv also provides a strict, fixed-shape tensor API used by Y47:
+
+```python
+from riichienv import RiichiEnv
+
+env = RiichiEnv(game_mode="4p-red-half", skip_mjai_logging=True)
+turns = env.reset_y47(seed=0)
+while not env.done():
+    action_index = {pid: 0 for pid in turns.keys()}
+    turns, rewards, done = env.step_y47(action_index)
+```
+
+Each `turns[pid]` is a `Y47Turn` containing NumPy arrays for token/action tensors and masks.
+
 `env.reset()` initializes the game state and returns the initial observations. The returned `obs_dict` maps each active player ID to their respective `Observation` object.
 
 ```python

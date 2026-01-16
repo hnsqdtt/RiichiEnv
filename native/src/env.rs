@@ -3,6 +3,7 @@ use pyo3::types::{PyAnyMethods, PyDict, PyDictMethods, PyListMethods};
 use pyo3::{pyclass, pymethods, Bound, IntoPyObject, Py, PyAny, PyErr, PyResult, Python};
 // IntoPy might be needed for .into_py() calls if I revert?
 // I used .to_object() which needs ToPyObject.
+use numpy::{ndarray::Array1, IntoPyArray, PyArray1};
 use rand::prelude::*;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,9 @@ use std::collections::{HashMap, HashSet};
 use crate::parser::tid_to_mjai;
 use crate::types::{Agari, Conditions, Meld, MeldType, Wind};
 use crate::yaku;
+use crate::y47_encode;
+use crate::y47_schema;
+use crate::y47_turn::Y47Turn;
 use sha2::Digest;
 
 // --- Enums ---
@@ -301,6 +305,7 @@ pub struct RiichiEnv {
     pub melds: [Vec<Meld>; 4],
     #[pyo3(get, set)]
     pub discards: [Vec<u8>; 4],
+    pub discard_flags: [Vec<u8>; 4],
     #[pyo3(get, set)]
     pub current_player: u8,
     #[pyo3(get, set)]
@@ -336,6 +341,9 @@ pub struct RiichiEnv {
     #[pyo3(get)]
     pub phase: Phase,
     pub active_players: Vec<u8>,
+    y47_cached_actions: [Vec<Action>; 4],
+    y47_cached_active: Vec<u8>,
+    y47_cache_valid: bool,
     pub last_discard: Option<(u8, u8)>,
     #[pyo3(get, set)]
     pub current_claims: HashMap<u8, Vec<Action>>,
@@ -712,6 +720,64 @@ fn _tid_to_mjai_hand(hand: &[u8]) -> Vec<String> {
     hand.iter().map(|&t| tid_to_mjai(t)).collect()
 }
 
+impl RiichiEnv {
+    fn _y47_clear_cache(&mut self) {
+        for table in self.y47_cached_actions.iter_mut() {
+            table.clear();
+        }
+        self.y47_cached_active.clear();
+        self.y47_cache_valid = false;
+    }
+
+    fn _y47_advance_after_kyoku_end(&mut self, py: Python<'_>) -> PyResult<()> {
+        if !self.active_players.is_empty() || self.is_done {
+            return Ok(());
+        }
+        if !self.needs_initialize_next_round {
+            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "active_players is empty but needs_initialize_next_round=False",
+            ));
+        }
+        for _ in 0..64 {
+            let _ = self.step(py, HashMap::new())?;
+            if !self.active_players.is_empty() || self.is_done {
+                return Ok(());
+            }
+        }
+        Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+            "stuck while advancing to next kyoku (active_players stayed empty)",
+        ))
+    }
+
+    fn _y47_encode_and_cache_turns(&mut self, py: Python<'_>) -> PyResult<HashMap<u8, Y47Turn>> {
+        self._y47_clear_cache();
+
+        if self.active_players.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let mut active = self.active_players.clone();
+        active.sort();
+
+        let mut turns: HashMap<u8, Y47Turn> = HashMap::new();
+        for pid in &active {
+            let actions = self._get_legal_actions_internal(*pid);
+            let turn = y47_encode::encode_turn(
+                py,
+                self,
+                *pid,
+                &self.hands[*pid as usize],
+                &actions,
+            )?;
+            turns.insert(*pid, turn);
+            self.y47_cached_actions[*pid as usize] = actions;
+        }
+        self.y47_cached_active = active;
+        self.y47_cache_valid = true;
+        Ok(turns)
+    }
+}
+
 #[pymethods]
 impl RiichiEnv {
     #[new]
@@ -755,6 +821,7 @@ impl RiichiEnv {
             hands: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
             melds: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
             discards: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
+            discard_flags: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
             current_player: 0,
             turn_count: 0,
             is_done: false,
@@ -770,6 +837,9 @@ impl RiichiEnv {
             double_riichi_declared: [false; 4],
             phase: Phase::WaitAct,
             active_players: vec![0],
+            y47_cached_actions: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
+            y47_cached_active: Vec::new(),
+            y47_cache_valid: false,
             last_discard: None,
             current_claims: HashMap::new(),
             pending_kan: None,
@@ -840,6 +910,7 @@ impl RiichiEnv {
     fn set_discards(&mut self, discards: [Vec<u32>; 4]) {
         for (i, d) in discards.iter().enumerate() {
             self.discards[i] = d.iter().map(|&x| x as u8).collect();
+            self.discard_flags[i] = vec![0; self.discards[i].len()];
         }
     }
 
@@ -902,6 +973,7 @@ impl RiichiEnv {
         if let Some(s) = seed {
             self.seed = Some(s);
         }
+        self._y47_clear_cache();
 
         // Reset MJAI log for new game/episode
         self.mjai_log.clear();
@@ -940,6 +1012,106 @@ impl RiichiEnv {
         );
 
         self.step(py, HashMap::new())
+    }
+
+    #[pyo3(signature = (oya=None, wall=None, bakaze=None, scores=None, honba=None, kyotaku=None, seed=None))]
+    #[allow(clippy::too_many_arguments)]
+    pub fn reset_y47(
+        &mut self,
+        py: Python<'_>,
+        oya: Option<u8>,
+        wall: Option<Vec<u8>>,
+        bakaze: Option<u8>,
+        scores: Option<Vec<i32>>,
+        honba: Option<u8>,
+        kyotaku: Option<u32>,
+        seed: Option<u64>,
+    ) -> PyResult<HashMap<u8, Y47Turn>> {
+        self._y47_clear_cache();
+        let _ = self.reset(py, oya, wall, bakaze, scores, honba, kyotaku, seed)?;
+        if self.is_done {
+            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "env.done() returned True immediately after reset_y47()",
+            ));
+        }
+        self._y47_advance_after_kyoku_end(py)?;
+        self._y47_encode_and_cache_turns(py)
+    }
+
+    pub fn step_y47(
+        &mut self,
+        py: Python<'_>,
+        action_index: HashMap<u8, i64>,
+    ) -> PyResult<(HashMap<u8, Y47Turn>, Py<PyArray1<f32>>, bool)> {
+        if !self.y47_cache_valid {
+            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "step_y47 called without a valid cached turns",
+            ));
+        }
+
+        let mut expected = self.y47_cached_active.clone();
+        expected.sort();
+        let mut got: Vec<u8> = action_index.keys().copied().collect();
+        got.sort();
+        if got != expected {
+            return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                "action_index keys mismatch: expected={:?}, got={:?}",
+                expected, got
+            )));
+        }
+
+        let mut pending_actions: HashMap<u8, Action> = HashMap::new();
+        for pid in &expected {
+            let idx = action_index
+                .get(pid)
+                .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("missing pid"))?;
+            if *idx < 0 || *idx >= (y47_schema::MAX_ACTIONS as i64) {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "action index out of range: {idx}"
+                )));
+            }
+            let idx_u = *idx as usize;
+            let table = &self.y47_cached_actions[*pid as usize];
+            if idx_u >= table.len() {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                    "action is illegal according to legal_action_mask",
+                ));
+            }
+            pending_actions.insert(*pid, table[idx_u].clone());
+        }
+
+        let _ = self.step(py, pending_actions)?;
+
+        let done = self.is_done;
+        let mut rewards = Array1::<f32>::zeros(y47_schema::NUM_PLAYERS);
+        if done {
+            let ranks = self.ranks();
+            for p in 0..y47_schema::NUM_PLAYERS {
+                let r = ranks[p] as usize;
+                if r < 1 || r > y47_schema::NUM_PLAYERS {
+                    return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                        "invalid rank {r} for player {p}"
+                    )));
+                }
+                rewards[p] = y47_schema::RANK_REWARDS[r - 1];
+            }
+        }
+        let rewards_py = rewards.into_pyarray(py).unbind();
+
+        self._y47_clear_cache();
+
+        if done {
+            return Ok((HashMap::new(), rewards_py, true));
+        }
+
+        self._y47_advance_after_kyoku_end(py)?;
+        let turns = self._y47_encode_and_cache_turns(py)?;
+        if turns.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
+                "env produced empty turns but not done",
+            ));
+        }
+        Ok((turns, rewards_py, false))
     }
 
     #[pyo3(signature = (players=None))]
@@ -1232,11 +1404,12 @@ impl RiichiEnv {
         py: Python<'py>,
         actions: HashMap<u8, Action>,
     ) -> PyResult<Py<PyAny>> {
+        self._y47_clear_cache();
         while !self.is_done {
             if self.needs_initialize_next_round {
                 self._initialize_next_round(self.pending_oya_won, self.pending_is_draw);
                 if self.is_done {
-                    // Game ended during initialization (e.g. Sudden Death)
+                    // Game ended during initialization (e.g. Sudden Death)     
                     return self.get_obs_py(py, Some(self.active_players.clone()));
                 }
             }
@@ -2119,7 +2292,22 @@ impl RiichiEnv {
             // But if tsumogiri and tile was drawn_tile (which is in hand), it should find it.
         }
 
+        let mut flags: u8 = 0;
+        if is_tsumogiri {
+            flags |= y47_schema::RIVER_FLAG_TSUMOGIRI;
+        }
+        if self.riichi_stage[pid as usize] {
+            flags |= y47_schema::RIVER_FLAG_RIICHI_TILE;
+        }
+        if flags >= y47_schema::NUM_RIVER_FLAGS {
+            panic!("internal error: river flags out of range: {}", flags);
+        }
+
         self.discards[pid as usize].push(tile);
+        self.discard_flags[pid as usize].push(flags);
+        if self.discard_flags[pid as usize].len() != self.discards[pid as usize].len() {
+            panic!("internal error: discard_flags length mismatch after discard");
+        }
         self.drawn_tile = None;
         self.last_discard = Some((pid, tile));
 
@@ -2536,6 +2724,7 @@ impl RiichiEnv {
         self.hands = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
         self.melds = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
         self.discards = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
+        self.discard_flags = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
         self.is_done = false;
         self.current_claims = HashMap::new();
         self.pending_kan = None;

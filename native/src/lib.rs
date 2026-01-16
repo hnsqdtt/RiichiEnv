@@ -11,6 +11,9 @@ mod env;
 mod parser;
 mod replay;
 mod rule;
+mod y47_encode;
+mod y47_schema;
+mod y47_turn;
 
 #[pyfunction]
 fn check_riichi_candidates(tiles_136: Vec<u8>) -> Vec<u32> {
@@ -70,6 +73,7 @@ fn _riichienv(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<env::Action>()?;
     m.add_class::<env::Observation>()?;
     m.add_class::<env::RiichiEnv>()?;
+    m.add_class::<y47_turn::Y47Turn>()?;
 
     m.add_function(wrap_pyfunction!(score::calculate_score, m)?)?;
     m.add_function(wrap_pyfunction!(parser::parse_hand, m)?)?;
