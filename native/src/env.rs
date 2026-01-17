@@ -1082,6 +1082,8 @@ impl RiichiEnv {
 
         let _ = self.step(py, pending_actions)?;
 
+        self._y47_advance_after_kyoku_end(py)?;
+
         let done = self.is_done;
         let mut rewards = Array1::<f32>::zeros(y47_schema::NUM_PLAYERS);
         if done {
@@ -1104,7 +1106,6 @@ impl RiichiEnv {
             return Ok((HashMap::new(), rewards_py, true));
         }
 
-        self._y47_advance_after_kyoku_end(py)?;
         let turns = self._y47_encode_and_cache_turns(py)?;
         if turns.is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
